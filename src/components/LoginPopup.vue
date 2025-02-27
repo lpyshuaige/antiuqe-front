@@ -30,27 +30,50 @@ const props = defineProps({
 
 const emit = defineEmits(['update:show', 'login', 'close'])
 
+// 登录请求函数
+const loginRequest = async (code: string) => {
+  try {
+    console.log('发送登录请求...')
+    const response = await Taro.request({
+      url: 'http://43.138.143.44:8080/user/login',
+      method: 'GET',
+      header: {
+        'code': code
+      }
+    })
+    console.log('登录请求成功：', response)
+    return response
+  } catch (error) {
+    console.error('登录请求失败：', error)
+    throw error
+  }
+}
+
 const handleLogin = async () => {
   try {
     const loginRes = await Taro.login()
     if (loginRes.code) {
-      console.log('登录成功，code:', loginRes.code)
-      // 这里应该调用后端接口获取token和isAuth
-      // 模拟后端返回数据
-      const mockResponse = {
-        token: 'mock_token',
-        isAuth: false
-      }
+      console.log('微信登录成功，code:', loginRes.code)
+      
+      // 调用后端登录接口
+      const res = await loginRequest(loginRes.code)
+      
       // 存储token
-      Taro.setStorageSync('token', mockResponse.token)
+      console.log(res)
+      Taro.setStorageSync('token', res.data.data.sessionId)
+      Taro.setStorageSync('userInfo', res.data.data)
       // 通知父组件登录成功，并传递是否已授权的状态
-      emit('login', mockResponse.isAuth)
+      emit('login', res.data.data.imageUrl || res.data.data.nickname)
+      
+      // 关闭登录弹窗
+      emit('close')
     }
   } catch (err) {
     console.error('登录失败', err)
     Taro.showToast({
       title: '登录失败',
-      icon: 'error'
+      icon: 'error',
+      duration: 2000
     })
   }
 }

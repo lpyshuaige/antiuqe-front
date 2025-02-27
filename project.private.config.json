@@ -3,7 +3,8 @@
   "projectname": "antique-app",
   "setting": {
     "compileHotReLoad": true,
-    "bigPackageSizeSupport": true
+    "bigPackageSizeSupport": true,
+    "urlCheck": false
   },
   "libVersion": "development"
 }

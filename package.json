@@ -54,6 +54,7 @@
     "@tarojs/runtime": "3.6.25",
     "@tarojs/shared": "3.6.25",
     "@tarojs/taro": "3.6.25",
+    "axios": "^0.27.2",
     "axios-taro-adapter": "^0.0.3",
     "vue": "^3.2.40"
   },

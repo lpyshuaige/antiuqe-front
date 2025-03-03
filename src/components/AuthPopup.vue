@@ -33,7 +33,7 @@
           <input 
             type="nickname" 
             class="nickname-input" 
-            :value="nickName" 
+            :value="nickname" 
             @change="onNickNameChange"
             placeholder="请输入昵称" 
           />
@@ -80,10 +80,10 @@ const props = defineProps({
 const emit = defineEmits(['update:show', 'confirm', 'close'])
 
 const avatarUrl = ref('')
-const nickName = ref('')
+const nickname = ref('')
 
 const isValid = computed(() => {
-  return avatarUrl.value && nickName.value
+  return avatarUrl.value && nickname.value
 })
 
 const onChooseAvatar = (e) => {
@@ -94,10 +94,10 @@ const onChooseAvatar = (e) => {
 
 const onNickNameChange = (e) => {
   const { value: newNickName } = e.detail
-  nickName.value = newNickName
+  nickname.value = newNickName
 }
 
-const handleConfirm = () => {
+const handleConfirm = async () => {
   if (!isValid.value) {
     Taro.showToast({
       title: '请完善头像和昵称',
@@ -106,13 +106,61 @@ const handleConfirm = () => {
     return
   }
 
-  const userInfo = {
-    avatarUrl: avatarUrl.value,
-    nickName: nickName.value
+  try {
+    console.log('开始上传文件，参数：', {
+      avatarUrl: avatarUrl.value,
+      nickname: nickname.value,
+      token: Taro.getStorageSync('token')
+    })
+
+    // 直接调用上传接口
+    const res = await Taro.uploadFile({
+      url: 'http://43.138.143.44:8080/user/userAuth',
+      filePath: avatarUrl.value,
+      name: 'avatar',
+      formData: {
+        'nickname': nickname.value
+      },
+      header: {
+        'sessionId': Taro.getStorageSync('token')
+      }
+    })
+
+    console.log('上传响应：', res)
+
+    if (res.statusCode === 200) {
+      const responseData = JSON.parse(res.data)
+      console.log('授权成功：', responseData)
+
+      if (responseData.code !== 200) {
+        throw new Error(responseData.msg || '服务器返回错误')
+      }
+
+      // 获取原有的用户信息
+      const existingUserInfo = Taro.getStorageSync('userInfo') || {}
+      
+      // 更新本地存储的用户信息，保留原有字段
+      const userInfo = {
+        ...existingUserInfo,
+        avatarUrl: responseData.data.avatarUrl,
+        nickname: responseData.data.nickname
+      }
+      
+      Taro.setStorageSync('userInfo', userInfo)
+      console.log('更新用户信息成功：', userInfo)
+      
+      // 通知父组件授权成功
+      emit('confirm', userInfo)
+    } else {
+      throw new Error(`请求失败，状态码：${res.statusCode}`)
+    }
+  } catch (error) {
+    console.error('授权详细错误：', error)
+    Taro.showToast({
+      title: '授权失败，请重试',
+      icon: 'error'
+    })
   }
-  
-  console.log('用户信息更新：', userInfo)
-  emit('confirm', userInfo)
 }
 
 const handleClose = () => {

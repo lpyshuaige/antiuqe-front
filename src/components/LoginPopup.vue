@@ -63,7 +63,7 @@ const handleLogin = async () => {
       Taro.setStorageSync('token', res.data.data.sessionId)
       Taro.setStorageSync('userInfo', res.data.data)
       // 通知父组件登录成功，并传递是否已授权的状态
-      emit('login', res.data.data.imageUrl || res.data.data.nickname)
+      emit('login')
       
       // 关闭登录弹窗
       emit('close')

@@ -10,7 +10,7 @@
         <nut-avatar size="large" class="avatar">
           <img :src="userInfo.avatarUrl" class="avatar-img" />
         </nut-avatar>
-        <text class="nickname">{{ userInfo.nickName }}</text>
+        <text class="nickname">{{ userInfo.nickname || '微信用户' }}</text>
         <view class="arrow-icon" @tap="goToUserInfo">
           <IconFont name="right" size="16" />
         </view>

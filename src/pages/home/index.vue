@@ -47,27 +47,6 @@
             </nut-button>
           </view>
         </view>
-
-        <view class="analysis-section" v-if="current === 1">
-          <view class="loading-text">AI正在分析中...</view>
-        </view>
-
-        <view class="result-section" v-if="current === 2">
-          <view class="preview-result">
-            <view class="result-title">初步分析结果</view>
-            <view class="result-content">
-              {{ previewResult }}
-            </view>
-          </view>
-
-          <view class="unlock-section">
-            <view class="unlock-title">解锁完整报告</view>
-            <view class="unlock-price">￥9.9</view>
-            <nut-button type="primary" class="unlock-btn" @click="handleUnlock">
-              立即解锁
-            </nut-button>
-          </view>
-        </view>
       </view>
     </view>
 
@@ -93,7 +72,6 @@ import { IconFont } from "@nutui/icons-vue-taro"
 
 const current = ref(0)
 const fileList = ref([])
-const previewResult = ref('这件古玩疑似为清代青花瓷器，具体年代和真伪需要进一步解锁完整报告查看...')
 const isLoading = ref(false)
 const showLoginPopup = ref(false)
 const showAuthPopup = ref(false)
@@ -252,7 +230,7 @@ const startAnalyzeProcess = async () => {
 }
 
 // 处理登录响应
-const handleLoginResponse = (isAuth: boolean) => {
+const handleLoginResponse = () => {
   console.log('登录成功')
   showLoginPopup.value = false
   // 登录成功后，检查授权状态

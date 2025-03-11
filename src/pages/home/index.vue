@@ -180,7 +180,7 @@ const checkLoginStatus = async () => {
 // 检查授权状态并开始分析
 const checkAuthAndStartAnalyze = async () => {
   const userInfo = Taro.getStorageSync('userInfo')
-  if (!userInfo || !userInfo.avatarUrl || !userInfo.nickName) {
+  if (!userInfo || !userInfo.avatarUrl || !userInfo.nickname) {
     // 未授权，显示授权弹窗
     showAuthPopup.value = true
   } else {
@@ -193,31 +193,65 @@ const checkAuthAndStartAnalyze = async () => {
 const startAnalyzeProcess = async () => {
   isLoading.value = true
   try {
-    // 准备上传的图片数据
-    const images = fileList.value.map(file => file.url)
+    // 构建 formData，只包含除第一张外的其他图片
+    const formData = {}
+    fileList.value.slice(1).forEach((file, index) => {
+      formData[`file${index + 1}`] = file.url  // 从 file1 开始，因为 file0 通过 filePath 传递
+    })
 
-    // 模拟调用后端分析接口
-    const response = await new Promise(resolve => {
-      setTimeout(() => {
-        resolve({
-          code: 0,
-          data: {
-            canViewFullReport: false, // 是否可以查看完整报告
-            basicInfo: {
-              category: '青花瓷器',
-              age: '清代',
-              material: '瓷器'
-            },
-            detailInfo: null // 非会员返回null
-          }
+    console.log('准备上传的数据:', {
+      file0: fileList.value[0].url,  // 第一张图片通过 filePath 上传
+      ...formData  // 其他图片通过 formData 上传
+    })
+
+    // 发送请求
+    const res = await Taro.uploadFile({
+      url: 'http://43.138.143.44:8080/minio/imageUpload',
+      filePath: fileList.value[0].url,  // 第一张图片
+      name: 'files',  // 第一张图片的参数名
+      formData: formData,  // 只包含其他图片的表单数据
+      header: {
+        'sessionId': Taro.getStorageSync('token'),
+        'content-type': 'multipart/form-data',
+        'X-Files-Count': fileList.value.length.toString()  // 添加自定义header表明文件数量
+      }
+    })
+    console.log('上传结果:', res)
+    if (res.statusCode === 200){
+        const responseData = JSON.parse(res.data)
+        if (responseData.code !== 200) {
+          throw new Error(responseData.msg || '服务器返回错误')
+        }
+        Taro.showToast({
+            title: '正在分析中，鉴定结果请到鉴定列表中查找',
+            icon: 'none'
         })
-      }, 2000)
-    })
-
-    // 跳转到结果页面
-    Taro.navigateTo({
-      url: `/pages/result/index?imageList=${encodeURIComponent(JSON.stringify(images))}&canViewFullReport=${response.data.canViewFullReport}&basicInfo=${encodeURIComponent(JSON.stringify(response.data.basicInfo))}&detailInfo=${encodeURIComponent(JSON.stringify(response.data.detailInfo))}`
-    })
+    }else{
+      throw new Error(`请求失败，状态码：${res.statusCode}`)
+    }
+    // // 准备上传的图片数据
+    // const images = fileList.value.map(file => file.url)
+    // // 模拟调用后端分析接口
+    // const response = await new Promise(resolve => {
+    //   setTimeout(() => {
+    //     resolve({
+    //       code: 0,
+    //       data: {
+    //         canViewFullReport: false, // 是否可以查看完整报告
+    //         basicInfo: {
+    //           category: '青花瓷器',
+    //           age: '清代',
+    //           material: '瓷器'
+    //         },
+    //         detailInfo: null // 非会员返回null
+    //       }
+    //     })
+    //   }, 2000)
+    // })
+    // // 跳转到结果页面
+    // Taro.navigateTo({
+    //   url: `/pages/result/index?imageList=${encodeURIComponent(JSON.stringify(images))}&canViewFullReport=${response.data.canViewFullReport}&basicInfo=${encodeURIComponent(JSON.stringify(response.data.basicInfo))}&detailInfo=${encodeURIComponent(JSON.stringify(response.data.detailInfo))}`
+    // })
   } catch (err) {
     console.error('操作失败', err)
     Taro.showToast({

@@ -17,12 +17,27 @@
     <!-- 鉴定报告区域 -->
     <view class="report-section" v-if="!isLoading">
       <view class="content-box">
+        <!-- 报告标题 -->
+        <view class="report-header" v-if="reportInfo">
+          <view class="report-title">{{ reportInfo.name || '古玩鉴定报告' }}</view>
+          <view class="report-meta">
+            <view class="meta-item">
+              <text class="meta-label">年代：</text>
+              <text class="meta-value">{{ reportInfo.age || '未知' }}</text>
+            </view>
+            <view class="meta-item">
+              <text class="meta-label">真品率：</text>
+              <text class="meta-value">{{ reportInfo.rate ? reportInfo.rate + '%' : '未知' }}</text>
+            </view>
+          </view>
+        </view>
+
         <!-- 报告内容 -->
         <view
           ref="contentRef"
           class="content"
+          v-html="formattedContent"
         >
-          {{ displayContent }}
         </view>
 
         <!-- 非会员时的模糊遮罩和查看完整报告文字 -->
@@ -59,7 +74,7 @@
             <view class="option-content">
               <view class="option-title">开通会员</view>
               <view class="option-desc">享受无限次鉴定服务</view>
-              <view class="option-price">¥39.9/月</view>
+              <view class="option-price">12元/月</view>
             </view>
             <view class="option-check">
               <CheckChecked 
@@ -83,7 +98,7 @@
             <view class="option-content">
               <view class="option-title">单次鉴定</view>
               <view class="option-desc">仅查看本次完整报告</view>
-              <view class="option-price">¥9.9/次</view>
+              <view class="option-price">8元/次</view>
             </view>
             <view class="option-check">
               <CheckChecked 
@@ -106,7 +121,7 @@
             class="confirm-btn"
             @click="handlePayment"
           >
-            确认支付
+            确认
           </nut-button>
         </view>
       </view>
@@ -127,33 +142,36 @@ const selectedOption = ref('member')
 const userInfo = ref(null)
 const contentRef = ref(null)
 const isLoading = ref(true)
+const reportInfo = ref(null)
 
 // 定义初始显示的内容和完整内容
-const fullContent = ref(`这件藏品是一件清代中期的青花瓷瓶，整体保存状况良好。瓷瓶高约28厘米，口径8厘米，底径10厘米。器型端庄秀丽，比例协调。
+const fullContent = ref('')
 
-从工艺特征来看，胎体细腻洁白，胎质纯净，釉面光润均匀，无明显气泡和开片。青花发色沉稳，呈现典型的清代中期特征，其中蓝料的层次分明，深浅过渡自然。
-
-纹饰内容以传统的缠枝莲纹为主题，构图疏密有致。主体纹样分为三层：口沿处饰缠枝花卉纹，腹部绘制缠枝莲纹主题图案，底部为如意云头纹。笔法流畅自然，线条劲挺有力，体现了较高的制作水平。
-
-从器形来看，口沿外撇，短颈，丰肩，腹部渐收，圈足外撇，整体造型典雅大方，符合清代官窑的审美特点。底部有双圈圆足，足墙规整，修足工艺精细。
-
-釉色呈现莹润的象牙白，釉层均匀，无明显积釉现象。在釉面光泽度、釉层厚薄的控制上都显示出很好的烧造水平。底足露胎处可见细腻的胎骨，呈现淡淡的米黄色，这是清代中期瓷器的典型特征之一。
-
-综合来看，这件青花瓷瓶的胎釉质量、装饰风格、工艺水平都达到了较高的标准，具有较高的收藏价值。建议注意保养，避免剧烈碰撞和温差变化，以保持其良好的保存状态。`)
-
-// 计算当前显示的内容
-const displayContent = computed(() => {
-  if (canViewFullReport.value) {
-    return fullContent.value
+// 计算格式化后的内容
+const formattedContent = computed(() => {
+  if (!reportInfo.value) return ''
+  
+  let content = ''
+  
+  // 使用description作为主要内容
+  if (reportInfo.value.description) {
+    content = reportInfo.value.description
   }
-  // 计算三分之一的长度
-  const oneThirdLength = Math.floor(fullContent.value.length / 3)
-  // 找到最近的段落结束位置
-  let cutoffIndex = fullContent.value.slice(0, oneThirdLength).lastIndexOf('\n\n')
-  if (cutoffIndex === -1) {
-    cutoffIndex = oneThirdLength
+  
+  // 如果不能查看完整报告，则只显示部分内容
+  if (!canViewFullReport.value && content) {
+    // 计算三分之一的长度
+    const oneThirdLength = Math.floor(content.length / 3)
+    // 找到最近的段落结束位置
+    let cutoffIndex = content.slice(0, oneThirdLength).lastIndexOf('\n\n')
+    if (cutoffIndex === -1) {
+      cutoffIndex = oneThirdLength
+    }
+    content = content.slice(0, cutoffIndex)
   }
-  return fullContent.value.slice(0, cutoffIndex)
+  
+  // 将换行符转换为<br/>标签
+  return content.replace(/\n/g, '<br/>')
 })
 
 // 详细信息（仅会员可见）
@@ -195,40 +213,196 @@ onMounted(() => {
 
   const params = Taro.getCurrentInstance().router?.params
   if (params) {
-    // 获取并设置图片列表
-    try {
-      const imageListData = JSON.parse(decodeURIComponent(params.imageList || '[]'))
-      imageList.value = imageListData
-    } catch (error) {
-      console.error('解析图片列表失败', error)
-    }
-    
-    // 获取并设置详细信息（仅会员）
-    if (canViewFullReport.value && params.detailInfo) {
+    // 如果有ID参数，则通过ID获取鉴定记录详情
+    if (params.id) {
+      fetchReportDetail(params.id)
+    } else {
+      // 否则，使用传递的参数
+      // 获取并设置图片列表
       try {
-        const detailInfoData = JSON.parse(decodeURIComponent(params.detailInfo || '[]'))
-        detailInfo.value = detailInfoData
+        const imageListData = JSON.parse(decodeURIComponent(params.imageList || '[]'))
+        imageList.value = imageListData
       } catch (error) {
-        console.error('解析详细信息失败', error)
+        console.error('解析图片列表失败', error)
       }
+      
+      // 获取并设置是否可以查看完整报告
+      canViewFullReport.value = params.canViewFullReport === 'true'
+      
+      // 获取并设置详细信息（仅会员）
+      if (canViewFullReport.value && params.detailInfo) {
+        try {
+          const detailInfoData = JSON.parse(decodeURIComponent(params.detailInfo || '[]'))
+          detailInfo.value = detailInfoData
+        } catch (error) {
+          console.error('解析详细信息失败', error)
+        }
+      }
+      
+      // 直接设置isLoading为false
+      isLoading.value = false
     }
   }
-
-  // 直接设置isLoading为false
-  isLoading.value = false
 })
 
+// 通过ID获取鉴定记录详情
+const fetchReportDetail = async (id) => {
+  try {
+    const token = Taro.getStorageSync('token')
+    if (!token) {
+      Taro.showToast({
+        title: '请先登录',
+        icon: 'none'
+      })
+      Taro.navigateTo({
+        url: '/pages/profile/index'
+      })
+      return
+    }
+    
+    console.log('获取鉴定记录详情，ID：', id)
+    
+    // 获取当前路由参数
+    const params = Taro.getCurrentInstance().router?.params
+    
+    // 如果有传递图片列表参数，先解析并设置
+    if (params && params.imageList) {
+      try {
+        const imageListData = JSON.parse(decodeURIComponent(params.imageList || '[]'))
+        imageList.value = imageListData
+        console.log('从参数获取图片列表成功', imageList.value.length)
+      } catch (error) {
+        console.error('解析图片列表参数失败', error)
+      }
+    }
+    
+    const res = await Taro.request({
+      url: `http://43.138.143.44:8080/report/getDetail`,
+      method: 'GET',
+      data: { id },
+      header: {
+        'sessionId': token
+      }
+    })
+    
+    console.log('鉴定记录详情响应：', res)
+    
+    if (res.statusCode === 200 && res.data.code === 200) {
+      const { id, info, canShow } = res.data.data
+      
+      // 设置报告内容
+      if (info) {
+        // 处理info对象
+        if (typeof info === 'string') {
+          try {
+            // 尝试解析JSON字符串
+            reportInfo.value = JSON.parse(info)
+            console.log('解析info成功:', reportInfo.value)
+          } catch (error) {
+            // 如果解析失败，则将整个字符串作为description
+            reportInfo.value = { description: info }
+            console.log('info不是有效的JSON，作为description使用')
+          }
+        } else if (typeof info === 'object') {
+          // 如果已经是对象，直接使用
+          reportInfo.value = info
+          console.log('info已经是对象:', reportInfo.value)
+        } else {
+          // 其他情况，转为字符串作为description
+          reportInfo.value = { description: String(info) }
+          console.log('info转为字符串作为description使用')
+        }
+      }
+      
+      // 根据后端返回的canShow字段决定用户是否能查看完整报告
+      canViewFullReport.value = canShow
+      console.log('用户是否可以查看完整报告:', canViewFullReport.value ? '是' : '否')
+      
+      // 如果没有从参数获取到图片列表，尝试从详情中获取
+      if (imageList.value.length === 0 && res.data.data.imageList) {
+        try {
+          const imageListData = typeof res.data.data.imageList === 'string' 
+            ? JSON.parse(res.data.data.imageList) 
+            : res.data.data.imageList
+          
+          imageList.value = imageListData
+          console.log('从API响应获取图片列表成功', imageList.value.length)
+        } catch (error) {
+          console.error('解析API返回的图片列表失败', error)
+        }
+      }
+    } else {
+      Taro.showToast({
+        title: res.data.msg || '获取详情失败',
+        icon: 'none'
+      })
+    }
+  } catch (error) {
+    console.error('获取鉴定记录详情失败', error)
+    Taro.showToast({
+      title: '网络错误',
+      icon: 'none'
+    })
+  } finally {
+    isLoading.value = false
+  }
+}
+
 // 处理支付
-const handlePayment = () => {
-  // 设置为可以查看完整报告
-  canViewFullReport.value = true
-  // 关闭支付弹窗
-  showPaymentPopup.value = false
-  // 提示用户
-  Taro.showToast({
-    title: '查看完整报告',
-    icon: 'success'
-  })
+const handlePayment = async () => {
+  try {
+    const token = Taro.getStorageSync('token')
+    if (!token) {
+      Taro.showToast({
+        title: '请先登录',
+        icon: 'none'
+      })
+      return
+    }
+
+    // 准备请求参数
+    const params: any = {}
+    // 如果是单次鉴定，需要传递reportId
+    if (selectedOption.value === 'single') {
+      const currentParams = Taro.getCurrentInstance().router?.params
+      params.reportId = currentParams?.id
+    }
+
+    // 调用创建订单接口
+    const res = await Taro.request({
+      url: 'http://43.138.143.44:8080/order/createOrder',
+      method: 'POST',
+      data: params,
+      header: {
+        'sessionId': token
+      }
+    })
+
+    if (res.statusCode === 200 && res.data.code === 200) {
+      // 关闭支付弹窗
+      showPaymentPopup.value = false
+      
+      // 将订单数据转换为查询字符串
+      const orderData = res.data.data
+      const queryString = encodeURIComponent(JSON.stringify(orderData))
+      
+      // 跳转到订单详情页
+      Taro.navigateTo({
+        url: `/pages/order/detail/index?orderData=${queryString}`
+      })
+    } else {
+      Taro.showToast({
+        title: res.data.msg || '创建订单失败',
+        icon: 'none'
+      })
+    }
+  } catch (error) {
+    console.error('创建订单失败', error)
+    Taro.showToast({
+      title: '网络错误',
+      icon: 'none'
+    })
+  }
 }
 
 // 修改预览图片方法
@@ -250,18 +424,27 @@ const handleViewMore = () => {
   min-height: 100vh;
   background: #f8f8f8;
   padding-bottom: env(safe-area-inset-bottom);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 
   .image-section {
     width: 100%;
     padding: 12px;
     background: #fff;
     margin-bottom: 12px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-sizing: border-box;
     
     .image-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
       gap: 8px;
       margin: 0 auto;
+      width: auto;
+      max-width: 100%;
       
       .image-item {
         position: relative;
@@ -282,59 +465,175 @@ const handleViewMore = () => {
 
       // 根据图片数量调整布局
       &.single {
-        grid-template-columns: 1fr;
-        max-width: 160px; // 单图保持小巧
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        grid-template-columns: none;
+        max-width: 240px;
+        width: 240px;
+        height: 240px;
         margin: 0 auto;
         
         .image-item {
-          padding-bottom: 100%;
-          width: 100%;
-          max-width: 160px;
-          margin: 0 auto;
+          position: relative;
+          width: 240px;
+          height: 240px;
+          padding: 0;
+          margin: 0;
+          
+          .antique-image {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            border: 1px solid #eee;
+            background-color: #fff;
+            border-radius: 8px;
+          }
         }
       }
 
       &.two {
+        display: grid;
         grid-template-columns: repeat(2, 1fr);
-        max-width: 240px; // 两张图也保持较小
+        max-width: 280px;
+        width: 280px;
         margin: 0 auto;
+        
+        .image-item {
+          position: relative;
+          padding-bottom: 100%;
+          width: 100%;
+          height: 0;
+          
+          .antique-image {
+            border: 1px solid #eee;
+          }
+        }
       }
 
       &.three {
+        display: grid;
         grid-template-columns: repeat(3, 1fr);
-        max-width: 320px; // 三张图稍微大一点
+        max-width: 360px;
+        width: 360px;
+        margin: 0 auto;
+        
+        .image-item {
+          position: relative;
+          padding-bottom: 100%;
+          width: 100%;
+          height: 0;
+          
+          .antique-image {
+            border: 1px solid #eee;
+          }
+        }
       }
 
       &.four {
+        display: grid; /* 确保使用grid布局 */
         grid-template-columns: repeat(2, 1fr);
-        max-width: 320px; // 四张图也适当增大
+        max-width: 320px;
+        width: 320px;
         margin: 0 auto;
+        
+        .image-item {
+          position: relative;
+          padding-bottom: 100%;
+          width: 100%;
+          height: 0;
+          
+          .antique-image {
+            border: 1px solid #eee;
+          }
+        }
       }
 
       &.five,
       &.six {
+        display: grid; /* 确保使用grid布局 */
         grid-template-columns: repeat(3, 1fr);
-        max-width: 360px; // 五六张图时展示区域最大
+        max-width: 360px;
+        width: 360px;
+        margin: 0 auto;
+        
+        .image-item {
+          position: relative;
+          padding-bottom: 100%;
+          width: 100%;
+          height: 0;
+          
+          .antique-image {
+            border: 1px solid #eee;
+          }
+        }
       }
     }
   }
 
   .report-section {
-    margin: 12px;
+    width: 100%;
+    max-width: 650px; /* 设置最大宽度 */
+    margin: 12px auto;
     padding: 16px;
     background: #fff;
     border-radius: 8px;
+    box-sizing: border-box;
 
     .content-box {
       position: relative;
       width: 100%;
       overflow: hidden;
 
+      .report-header {
+        margin-bottom: 16px;
+        padding-bottom: 16px;
+        border-bottom: 1px solid #eee;
+
+        .report-title {
+          font-size: 18px;
+          font-weight: 600;
+          color: #333;
+          margin-bottom: 12px;
+          text-align: center;
+        }
+
+        .report-meta {
+          display: flex;
+          justify-content: space-between;
+          flex-wrap: wrap;
+          
+          .meta-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            flex: 1;
+            min-width: 120px;
+            
+            .meta-label {
+              font-size: 14px;
+              color: #666;
+              margin-right: 4px;
+            }
+            
+            .meta-value {
+              font-size: 14px;
+              color: #333;
+              font-weight: 500;
+            }
+          }
+        }
+      }
+
       .content {
         font-size: 14px;
         line-height: 1.8;
         color: #333;
-        white-space: pre-wrap;
+        text-align: justify;
+        padding: 8px 0;
       }
 
       .fade-out {

@@ -3,7 +3,6 @@ import '@nutui/nutui-taro/dist/style.css'
 import '@nutui/icons-vue/dist/style_iconfont.css'
 import './app.css'
 
-
 // 导入需要使用的组件
 import {
   Button,
@@ -16,11 +15,15 @@ import {
   Popup,
   Checkbox,
   Form,
-  FormItem
+  FormItem,
+  Empty,
+  Pagination
 } from '@nutui/nutui-taro'
 
 const App = createApp({
-  onShow (options) {},
+  onShow (options) {
+    console.log('App onShow.')
+  },
   // 入口组件不需要实现 render 方法，即使实现了也会被 taro 所覆盖
 })
 
@@ -36,5 +39,7 @@ App.use(Button)
    .use(Checkbox)
    .use(Form)
    .use(FormItem)
+   .use(Empty)
+   .use(Pagination)
 
 export default App

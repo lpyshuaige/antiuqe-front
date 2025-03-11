@@ -138,6 +138,9 @@ const handleHistory = () => {
     return
   }
   // 跳转到鉴定记录页面
+  Taro.navigateTo({
+    url: '/pages/history/index'
+  })
 }
 
 const handleService = () => {

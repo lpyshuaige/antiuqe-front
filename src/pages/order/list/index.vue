@@ -1,52 +1,62 @@
 <template>
-  <view class="history-container">
+  <view class="order-list-container">
     <view class="header">
-      <text class="title">鉴定记录</text>
+      <text class="title">我的订单</text>
     </view>
 
     <!-- 加载中状态 -->
-    <view v-if="loading && recordList.length === 0" class="loading-container">
+    <view v-if="loading && orderPoList.length === 0" class="loading-container">
       <view class="loading-icon"></view>
       <text class="loading-text">加载中...</text>
     </view>
 
     <!-- 空状态 -->
-    <nut-empty v-else-if="recordList.length === 0 && !loading" 
-      description="暂时没有记录"
+    <nut-empty v-else-if="orderPoList.length === 0 && !loading" 
+      description="暂时没有订单"
       image="empty">
     </nut-empty>
 
-    <view v-else class="record-list">
+    <view v-else class="order-list">
       <view 
-        v-for="(record, index) in recordList" 
-        :key="record.id" 
-        class="record-item"
+        v-for="(order, index) in orderPoList" 
+        :key="order.id" 
+        class="order-item"
       >
-        <view class="record-content">
-          <view class="image-container">
-            <view class="image-list">
-              <image 
-                v-for="(img, imgIndex) in record.imageList.slice(0, 2)"
-                :key="imgIndex" 
-                :src="img" 
-                mode="aspectFill" 
-                class="record-image" 
-              />
+        <view class="order-content">
+          <view class="order-info">
+            <view class="info-row">
+              <text class="label">支付用途</text>
+              <text class="value">{{ order.inform ? '开通会员' : '单次解锁报告' }}</text>
             </view>
-            <view v-if="record.isFinished" class="record-time">
-              {{ formatTime(record.finishedTime) }}
+            <view class="info-row">
+              <text class="label">支付金额</text>
+              <text class="value price">¥{{ formatAmount(order.amount) }}</text>
+            </view>
+            <view class="info-row">
+              <text class="label">创建时间</text>
+              <text class="value time">{{ formatTime(order.createdTime) }}</text>
             </view>
           </view>
-          <view class="record-action">
+          <view class="order-action" v-if="!order.isPaid">
             <nut-button 
               type="primary" 
               size="small" 
-              class="view-btn"
-              :disabled="!record.isFinished"
-              @click="viewReport(record)"
+              class="pay-btn"
+              @click="handlePay(order)"
             >
-              {{ record.isFinished ? '查看' : '生成中' }}
+              支付
             </nut-button>
+            <nut-button 
+              type="default" 
+              size="small" 
+              class="cancel-btn"
+              @click="handleCancel(order)"
+            >
+              取消
+            </nut-button>
+          </view>
+          <view class="order-status" v-else>
+            <text class="status-text">已支付</text>
           </view>
         </view>
       </view>
@@ -67,15 +77,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed, watch } from 'vue'
-import Taro from '@tarojs/taro'
-import BASE_URL from "../../utils/request";
+import { ref, computed, onMounted } from 'vue'
+import Taro, {useDidShow} from '@tarojs/taro'
+import BASE_URL from "../../../utils/request";
 
 
-// 记录列表
-const recordList = ref([])
+// 订单列表
+const orderPoList = ref([])
 const currentPage = ref(1)
-const pageSize = ref(3)
+const pageSize = ref(10)
 const loading = ref(false)
 const totalItems = ref(0)
 
@@ -84,8 +94,10 @@ const totalPages = computed(() => {
   return Math.ceil(totalItems.value / pageSize.value) || 1
 })
 
-// 获取鉴定记录
-const fetchRecords = async (page = 1) => {
+const initialLoad = ref(true)
+
+// 获取订单列表
+const fetchOrders = async (page = 1) => {
   if (loading.value) return Promise.resolve()
   
   // 验证页码
@@ -93,7 +105,7 @@ const fetchRecords = async (page = 1) => {
   if (totalPages.value > 0 && page > totalPages.value) page = totalPages.value
   
   loading.value = true
-  console.log('获取鉴定记录，页码，每页记录数：', page, pageSize.value)
+  console.log('获取订单列表，页码，每页记录数：', page, pageSize.value)
   
   try {
     const token = Taro.getStorageSync('token')
@@ -109,65 +121,49 @@ const fetchRecords = async (page = 1) => {
     }
     
     const res = await Taro.request({
-      url: `${BASE_URL}/report/listReport?page=${page}&pageSize=${pageSize.value}`,
+      url: `${BASE_URL}/order/listOrder?page=${page}&pageSize=${pageSize.value}`,
       method: 'GET',
       header: {
         'sessionId': token
       }
     })
     
-    console.log('鉴定记录响应：', res)
+    console.log('订单列表响应：', res)
     
     if (res.statusCode === 200 && res.data.code === 200) {
-      // 设置总记录数和记录列表
-      const { total, reportList } = res.data.data
-      totalItems.value = total
-      
-      const records = reportList.map(item => {
-        // 解析图片列表
-        let imageList = []
-        try {
-          imageList = typeof item.imageList === 'string' 
-            ? JSON.parse(item.imageList) 
-            : item.imageList
-        } catch (e) {
-          console.error('解析图片列表失败', e)
-          imageList = []
-        }
-        
-        return {
-          id: item.id,
-          orderId: item.order_id,
-          finishedTime: item.finishedTime,
-          imageList: imageList,
-          // 最多显示2张图片
-          //displayImages: imageList.slice(0, 2),
-          // 判断报告是否已生成完毕
-          isFinished: !!item.finishedTime
-        }
-      })
-      
-      recordList.value = records
+      // 设置总记录数和订单列表
+      const { total, orderPoList: orders } = res.data.data
+      totalItems.value = total || 0
+      orderPoList.value = orders || []
       currentPage.value = page
       
       console.log('当前页码:', page, '每页条数:', pageSize.value, '总记录数:', totalItems.value, '总页数:', totalPages.value)
     } else {
       Taro.showToast({
-        title: res.data.msg || '获取记录失败',
+        title: res.data.msg || '获取订单失败',
         icon: 'none'
       })
+      // 请求失败时确保orderPoList为空数组
+      orderPoList.value = []
     }
     return Promise.resolve()
   } catch (error) {
-    console.error('获取鉴定记录失败', error)
+    console.error('获取订单列表失败', error)
     Taro.showToast({
       title: '网络错误',
       icon: 'none'
     })
+    // 发生错误时确保orderPoList为空数组
+    orderPoList.value = []
     return Promise.reject(error)
   } finally {
     loading.value = false
   }
+}
+
+// 格式化金额（分转元）
+const formatAmount = (amount: number) => {
+  return (amount / 100).toFixed(2)
 }
 
 // 格式化时间
@@ -179,29 +175,23 @@ const formatTime = (timestamp) => {
   if (typeof timestamp === 'string') {
     // 兼容iOS的日期格式处理
     if (timestamp.includes(' ')) {
-      // 将 "yyyy-MM-dd HH:mm:ss" 转换为 "yyyy-MM-ddTHH:mm:ss"
       timestamp = timestamp.replace(' ', 'T')
     }
     
-    // 尝试解析日期
     date = new Date(timestamp)
     
-    // 检查日期是否有效
     if (isNaN(date.getTime())) {
-      // 如果无效，尝试手动解析
       const parts = timestamp.replace('T', ' ').split(/[- :]/)
       if (parts.length >= 6) {
-        // 格式: yyyy-MM-dd HH:mm:ss 或 yyyy-MM-ddTHH:mm:ss
         date = new Date(
           parseInt(parts[0]),
-          parseInt(parts[1]) - 1, // 月份从0开始
+          parseInt(parts[1]) - 1,
           parseInt(parts[2]),
           parseInt(parts[3]),
           parseInt(parts[4]),
           parseInt(parts[5])
         )
       } else if (parts.length >= 3) {
-        // 格式: yyyy-MM-dd
         date = new Date(
           parseInt(parts[0]),
           parseInt(parts[1]) - 1,
@@ -210,11 +200,9 @@ const formatTime = (timestamp) => {
       }
     }
   } else {
-    // 处理数字类型的时间戳
     date = new Date(timestamp)
   }
   
-  // 检查日期是否有效
   if (!date || isNaN(date.getTime())) {
     console.error('无效的日期格式:', timestamp)
     return ''
@@ -229,40 +217,94 @@ const formatTime = (timestamp) => {
   return `${year}-${month}-${day} ${hour}:${minute}`
 }
 
-// 查看报告详情
-const viewReport = (record) => {
-  if (!record.isFinished) return
+// 处理支付
+const handlePay = (order) => {
+  // 将订单数据转换为查询字符串
+  const orderData = encodeURIComponent(JSON.stringify(order))
   
-  console.log('查看报告', record.id)
-  
-  // 将完整的图片列表作为参数传递
-  const params = {
-    id: record.id,
-    imageList: encodeURIComponent(JSON.stringify(record.imageList))
-  }
-  
-  // 构建URL并导航到详情页
-  const url = `/pages/result/index?id=${params.id}&imageList=${params.imageList}`
-  console.log('导航到报告详情页', url)
-  
-  Taro.navigateTo({ url })
+  // 跳转到订单详情页
+  Taro.navigateTo({
+    url: `/pages/order/detail/index?orderData=${orderData}`
+  })
+}
+
+// 处理取消
+const handleCancel = (order) => {
+  Taro.showModal({
+    title: '提示',
+    content: '确定取消本次订单吗？',
+    success: async function (res) {
+      if (res.confirm) {
+        try {
+          const token = Taro.getStorageSync('token')
+          if (!token) {
+            Taro.showToast({
+              title: '请先登录',
+              icon: 'none'
+            })
+            return
+          }
+
+          const response = await Taro.request({
+            url: `${BASE_URL}/order/deleteOrder?orderId=${order.id}`,
+            method: 'POST',
+            header: {
+              'sessionId': token
+            }
+          })
+
+          console.log('取消订单响应：', response)
+
+          if (response.statusCode === 200 && response.data.code === 200) {
+            Taro.showToast({
+              title: '订单已取消',
+              icon: 'success'
+            })
+            // 刷新订单列表
+            await fetchOrders(currentPage.value)
+          } else {
+            Taro.showToast({
+              title: response.data.msg || '取消订单失败',
+              icon: 'none'
+            })
+          }
+        } catch (error) {
+          console.error('取消订单失败:', error)
+          Taro.showToast({
+            title: '网络错误',
+            icon: 'none'
+          })
+        }
+      }
+    }
+  })
 }
 
 // 页面切换
 const onPageChange = (page) => {
   if (page < 1 || (totalPages.value > 0 && page > totalPages.value)) return
   console.log('页面切换到：', page)
-  fetchRecords(page)
+  fetchOrders(page)
 }
 
-// 页面加载时获取记录
+// 页面加载时获取订单列表
 onMounted(() => {
-  fetchRecords(1)
+  console.log('订单列表页面初次加载')
+  fetchOrders(1)
+  initialLoad.value = false
+})
+
+useDidShow(() => {
+  if (!initialLoad.value){
+    console.log('回到订单列表页面，刷新', currentPage.value)
+    fetchOrders(currentPage.value)
+  }
+
 })
 </script>
 
 <style lang="scss">
-.history-container {
+.order-list-container {
   min-height: 100vh;
   background-color: #f7f8fa;
   padding-bottom: 32px;
@@ -316,60 +358,86 @@ onMounted(() => {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   }
   
-  .record-list {
+  .order-list {
     padding: 16px;
     
-    .record-item {
+    .order-item {
       background-color: #fff;
       border-radius: 12px;
       margin-bottom: 16px;
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
       overflow: hidden;
       
-      .record-content {
+      .order-content {
         padding: 16px;
-        position: relative;
         display: flex;
         align-items: center;
+        justify-content: space-between;
         
-        .image-container {
-          display: flex;
-          flex-direction: column;
+        .order-info {
+          flex: 1;
           
-          .image-list {
+          .info-row {
             display: flex;
-            gap: 8px;
+            align-items: center;
             margin-bottom: 8px;
-            width: 208px; /* 两张图片的宽度(100px*2)加上间距(8px) */
             
-            .record-image {
-              width: 100px;
-              height: 100px;
-              border-radius: 8px;
-              object-fit: cover;
-              border: 1px solid #eee;
+            &:last-child {
+              margin-bottom: 0;
             }
-          }
-          
-          .record-time {
-            font-size: 12px;
-            color: #999;
-            margin-top: 4px;
+            
+            .label {
+              font-size: 14px;
+              color: #666;
+              width: 70px;
+            }
+            
+            .value {
+              font-size: 14px;
+              color: #333;
+              
+              &.price {
+                font-size: 16px;
+                font-weight: 600;
+                color: #07c160;
+              }
+              
+              &.time {
+                font-size: 12px;
+                color: #999;
+              }
+            }
           }
         }
         
-        .record-action {
-          margin-left: auto;
+        .order-action {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          margin-left: 16px;
           
-          .view-btn {
+          .pay-btn,
+          .cancel-btn {
             width: 80px;
             height: 36px;
             border-radius: 18px;
             font-size: 14px;
-            
-            &[disabled] {
-              opacity: 0.6;
-            }
+          }
+          
+          .cancel-btn {
+            background: #f5f5f5;
+            border-color: #f5f5f5;
+            color: #666;
+          }
+        }
+        
+        .order-status {
+          margin-left: 16px;
+
+          
+          .status-text {
+            font-size: 14px;
+            color: #07c160;
           }
         }
       }

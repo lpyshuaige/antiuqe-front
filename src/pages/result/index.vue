@@ -19,21 +19,21 @@
       <view class="content-box">
         <!-- 报告标题 -->
         <view class="report-header" v-if="reportInfo">
-          <view class="report-title">{{ reportInfo.name || '古玩鉴定报告' }}</view>
-          <view class="report-meta">
-            <view class="meta-item">
-              <text class="meta-label">年代：</text>
-              <text class="meta-value">{{ reportInfo.age || '未知' }}</text>
-            </view>
-            <view class="meta-item">
-              <text class="meta-label">真品率：</text>
-              <text class="meta-value">{{ reportInfo.rate ? reportInfo.rate + '%' : '未知' }}</text>
-            </view>
+          <view class="report-title">鉴定报告</view>
+          <!-- AI生成内容提示 -->
+          <view class="ai-disclaimer">
+            <text>* 以下内容由AI生成，仅供参考，请仔细甄别</text>
           </view>
         </view>
 
-        <!-- 报告内容 -->
+        <!-- 报告内容 - Markdown渲染 -->
+        <view v-if="markdownData">
+          <to-wxml :nodes="markdownData" />
+        </view>
+        
+        <!-- 报告内容 - 传统HTML渲染（备用） -->
         <view
+          v-else
           ref="contentRef"
           class="content"
           v-html="formattedContent"
@@ -130,9 +130,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed, nextTick } from 'vue'
-import Taro from '@tarojs/taro'
+import { ref, onMounted, computed, watch } from 'vue'
+import Taro, { useDidShow } from '@tarojs/taro'
 import { Close, CheckNormal, CheckChecked, RectDown } from '@nutui/icons-vue-taro'
+import BASE_URL from "../../utils/request";
+import towxml from '../../components/towxml';
 
 // 页面参数
 const imageList = ref<string[]>([])
@@ -143,18 +145,49 @@ const userInfo = ref(null)
 const contentRef = ref(null)
 const isLoading = ref(true)
 const reportInfo = ref(null)
+const reportId = ref('')  // 存储报告ID，用于onShow时重新获取
+const markdownData = ref(null) // 存储解析后的markdown数据
 
 // 定义初始显示的内容和完整内容
-const fullContent = ref('')
+const markdownContent = ref('')
 
-// 计算格式化后的内容
+// 处理Markdown内容
+const parseMarkdown = (content) => {
+  if (!content) return null
+  
+  try {
+    // 如果不能查看完整报告，则只显示部分内容
+    let mdContent = content
+    if (!canViewFullReport.value) {
+      // 计算三分之一的长度
+      const oneThirdLength = Math.floor(content.length / 3)
+      // 找到最近的段落结束位置
+      let cutoffIndex = content.slice(0, oneThirdLength).lastIndexOf('\n\n')
+      if (cutoffIndex === -1) {
+        cutoffIndex = oneThirdLength
+      }
+      mdContent = content.slice(0, cutoffIndex)
+    }
+    
+    // 使用towxml解析markdown
+    return towxml(mdContent, 'markdown')
+  } catch (error) {
+    console.error('解析Markdown失败:', error)
+    return null
+  }
+}
+
+// 计算格式化后的内容（作为备用）
 const formattedContent = computed(() => {
   if (!reportInfo.value) return ''
   
   let content = ''
   
-  // 使用description作为主要内容
-  if (reportInfo.value.description) {
+  // 直接使用reportInfo作为内容（现在确定它是字符串）
+  if (typeof reportInfo.value === 'string') {
+    content = reportInfo.value
+  } else if (reportInfo.value && reportInfo.value.description) {
+    // 兼容旧版本，如果有description字段
     content = reportInfo.value.description
   }
   
@@ -173,6 +206,21 @@ const formattedContent = computed(() => {
   // 将换行符转换为<br/>标签
   return content.replace(/\n/g, '<br/>')
 })
+
+// 监听reportInfo和canViewFullReport的变化，更新markdown内容
+watch([() => reportInfo.value, canViewFullReport], () => {
+  if (reportInfo.value) {
+    // 直接使用reportInfo作为markdown内容
+    markdownContent.value = typeof reportInfo.value === 'string' 
+      ? reportInfo.value 
+      : (reportInfo.value.description || '')
+    
+    // 解析markdown内容
+    if (markdownContent.value) {
+      markdownData.value = parseMarkdown(markdownContent.value)
+    }
+  }
+}, { immediate: true })
 
 // 详细信息（仅会员可见）
 const detailInfo = ref([])
@@ -195,7 +243,6 @@ const gridLayoutClass = computed(() => {
 // 在组件挂载时获取用户信息和页面参数
 onMounted(() => {
   isLoading.value = true  // 开始加载
-  
   // 设置导航栏标题
   Taro.setNavigationBarTitle({
     title: '鉴定结果'
@@ -215,6 +262,7 @@ onMounted(() => {
   if (params) {
     // 如果有ID参数，则通过ID获取鉴定记录详情
     if (params.id) {
+      reportId.value = params.id  // 保存报告ID
       fetchReportDetail(params.id)
     } else {
       // 否则，使用传递的参数
@@ -242,6 +290,16 @@ onMounted(() => {
       // 直接设置isLoading为false
       isLoading.value = false
     }
+  }
+})
+
+// 页面显示时检查是否需要重新获取报告详情
+useDidShow(() => {
+  console.log('鉴定报告页面显示，检查是否需要刷新报告状态')
+  // 如果有报告ID，重新获取报告详情以更新支付状态
+  if (reportId.value) {
+    console.log('重新获取报告详情，ID:', reportId.value)
+    fetchReportDetail(reportId.value)
   }
 })
 
@@ -277,7 +335,7 @@ const fetchReportDetail = async (id) => {
     }
     
     const res = await Taro.request({
-      url: `http://43.138.143.44:8080/report/getDetail`,
+      url: `${BASE_URL}/report/getDetail`,
       method: 'GET',
       data: { id },
       header: {
@@ -290,47 +348,19 @@ const fetchReportDetail = async (id) => {
     if (res.statusCode === 200 && res.data.code === 200) {
       const { id, info, canShow } = res.data.data
       
-      // 设置报告内容
+      // 设置报告内容 - 简化处理，直接使用info字符串
       if (info) {
-        // 处理info对象
-        if (typeof info === 'string') {
-          try {
-            // 尝试解析JSON字符串
-            reportInfo.value = JSON.parse(info)
-            console.log('解析info成功:', reportInfo.value)
-          } catch (error) {
-            // 如果解析失败，则将整个字符串作为description
-            reportInfo.value = { description: info }
-            console.log('info不是有效的JSON，作为description使用')
-          }
-        } else if (typeof info === 'object') {
-          // 如果已经是对象，直接使用
-          reportInfo.value = info
-          console.log('info已经是对象:', reportInfo.value)
-        } else {
-          // 其他情况，转为字符串作为description
-          reportInfo.value = { description: String(info) }
-          console.log('info转为字符串作为description使用')
-        }
+        reportInfo.value = info
+        markdownContent.value = info
+        console.log('设置markdown内容:', info.substring(0, 100) + '...')
+        
+        // 解析markdown内容
+        markdownData.value = parseMarkdown(info)
       }
       
       // 根据后端返回的canShow字段决定用户是否能查看完整报告
       canViewFullReport.value = canShow
       console.log('用户是否可以查看完整报告:', canViewFullReport.value ? '是' : '否')
-      
-      // 如果没有从参数获取到图片列表，尝试从详情中获取
-      if (imageList.value.length === 0 && res.data.data.imageList) {
-        try {
-          const imageListData = typeof res.data.data.imageList === 'string' 
-            ? JSON.parse(res.data.data.imageList) 
-            : res.data.data.imageList
-          
-          imageList.value = imageListData
-          console.log('从API响应获取图片列表成功', imageList.value.length)
-        } catch (error) {
-          console.error('解析API返回的图片列表失败', error)
-        }
-      }
     } else {
       Taro.showToast({
         title: res.data.msg || '获取详情失败',
@@ -360,19 +390,23 @@ const handlePayment = async () => {
       return
     }
 
-    // 准备请求参数
-    const params: any = {}
-    // 如果是单次鉴定，需要传递reportId
+    // 准备请求参数和URL
+    let url = `${BASE_URL}/order/createOrder`
+    
+    // 只有在单次鉴定时才添加reportId参数
     if (selectedOption.value === 'single') {
       const currentParams = Taro.getCurrentInstance().router?.params
-      params.reportId = currentParams?.id
+      if (currentParams?.id) {
+        url += `?reportId=${currentParams.id}`
+      }
     }
+    
+    console.log('创建订单请求URL:', url)
 
     // 调用创建订单接口
     const res = await Taro.request({
-      url: 'http://43.138.143.44:8080/order/createOrder',
+      url: url,
       method: 'POST',
-      data: params,
       header: {
         'sessionId': token
       }
@@ -587,6 +621,16 @@ const handleViewMore = () => {
       position: relative;
       width: 100%;
       overflow: hidden;
+
+      .ai-disclaimer {
+        text-align: center;
+
+        text {
+          font-size: 12px;
+          color: #999;
+          font-style: italic;
+        }
+      }
 
       .report-header {
         margin-bottom: 16px;

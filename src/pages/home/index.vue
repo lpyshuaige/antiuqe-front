@@ -69,6 +69,7 @@ import Taro from '@tarojs/taro'
 import LoginPopup from '../../components/LoginPopup.vue'
 import AuthPopup from '../../components/AuthPopup.vue'
 import { IconFont } from "@nutui/icons-vue-taro"
+import BASE_URL from "../../utils/request";
 
 const current = ref(0)
 const fileList = ref([])
@@ -203,32 +204,61 @@ const startAnalyzeProcess = async () => {
       file0: fileList.value[0].url,  // 第一张图片通过 filePath 上传
       ...formData  // 其他图片通过 formData 上传
     })
-
-    // 发送请求
-    const res = await Taro.uploadFile({
-      url: 'http://43.138.143.44:8080/minio/imageUpload',
-      filePath: fileList.value[0].url,  // 第一张图片
-      name: 'files',  // 第一张图片的参数名
-      formData: formData,  // 只包含其他图片的表单数据
-      header: {
-        'sessionId': Taro.getStorageSync('token'),
-        'content-type': 'multipart/form-data',
-        'X-Files-Count': fileList.value.length.toString()  // 添加自定义header表明文件数量
+//
+    const MultiPart = require('../../utils/Multipart.min.js')
+    const fields = []
+    const files = fileList.value.map(file => {
+      return {
+        name: `files`,
+        filePath: file.url
+      }
+    })
+    console.log('上传参数:', files)
+    const res = await new MultiPart({
+          fields,
+          files
+    }
+    ).submit(`${BASE_URL}/minio/imageUpload`,{
+      header:{
+        'sessionId': Taro.getStorageSync('token')
       }
     })
     console.log('上传结果:', res)
-    if (res.statusCode === 200){
-        const responseData = JSON.parse(res.data)
-        if (responseData.code !== 200) {
-          throw new Error(responseData.msg || '服务器返回错误')
-        }
-        Taro.showToast({
-            title: '正在分析中，鉴定结果请到鉴定列表中查找',
-            icon: 'none'
-        })
+    if (res.data.code === 200){
+      console.log('上传成功')
+      Taro.showToast({
+        title: '正在分析中，鉴定结果请到鉴定列表中查找',
+        icon: 'none'
+      })
     }else{
-      throw new Error(`请求失败，状态码：${res.statusCode}`)
+      throw new Error(`请求失败，状态码：${res.data.msg}`)
     }
+
+    // 发送请求
+    // const res = await Taro.uploadFile({
+    //   url: `${BASE_URL}/minio/imageUpload`,
+    //   filePath: fileList.value[0].url,  // 第一张图片
+    //   name: 'files',  // 第一张图片的参数名
+    //   formData: formData,  // 只包含其他图片的表单数据
+    //   header: {
+    //     'sessionId': Taro.getStorageSync('token'),
+    //     'content-type': 'multipart/form-data',
+    //     'X-Files-Count': fileList.value.length.toString()  // 添加自定义header表明文件数量
+    //   }
+    // })
+    // console.log('上传结果:', res)
+    // if (res.statusCode === 200){
+    //     const responseData = JSON.parse(res.data)
+    //     if (responseData.code !== 200) {
+    //       throw new Error(responseData.msg || '服务器返回错误')
+    //     }
+    //     Taro.showToast({
+    //         title: '正在分析中，鉴定结果请到鉴定列表中查找',
+    //         icon: 'none'
+    //     })
+    // }else{
+    //   throw new Error(`请求失败，状态码：${res.statusCode}`)
+    // }
     // // 准备上传的图片数据
     // const images = fileList.value.map(file => file.url)
     // // 模拟调用后端分析接口

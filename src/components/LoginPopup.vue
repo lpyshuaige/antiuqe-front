@@ -20,6 +20,7 @@
 import { ref } from 'vue'
 import Taro from '@tarojs/taro'
 import { IconFont } from "@nutui/icons-vue-taro"
+import BASE_URL from "../utils/request";
 
 const props = defineProps({
   show: {
@@ -35,7 +36,7 @@ const loginRequest = async (code: string) => {
   try {
     console.log('发送登录请求...')
     const response = await Taro.request({
-      url: 'http://43.138.143.44:8080/user/login',
+      url: `${BASE_URL}/user/login`,
       method: 'GET',
       header: {
         'code': code

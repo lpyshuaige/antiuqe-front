@@ -68,6 +68,7 @@
 import { ref, computed } from 'vue'
 import Taro from '@tarojs/taro'
 import { IconFont } from "@nutui/icons-vue-taro"
+import BASE_URL from "../utils/request";
 
 
 const props = defineProps({
@@ -115,7 +116,7 @@ const handleConfirm = async () => {
 
     // 直接调用上传接口
     const res = await Taro.uploadFile({
-      url: 'http://43.138.143.44:8080/user/userAuth',
+      url: `${BASE_URL}/user/userAuth`,
       filePath: avatarUrl.value,
       name: 'avatar',
       formData: {

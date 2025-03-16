@@ -126,7 +126,10 @@ const handleOrder = () => {
     })
     return
   }
-  // 跳转到订单页面
+  // 跳转到订单列表页面
+  Taro.navigateTo({
+    url: '/pages/order/list/index'
+  })
 }
 
 const handleHistory = () => {

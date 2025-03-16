@@ -4,7 +4,8 @@ export default defineAppConfig({
     'pages/profile/index',
     'pages/result/index',
     'pages/history/index',
-    'pages/order/detail/index'
+    'pages/order/detail/index',
+    'pages/order/list/index'
   ],
   window: {
     backgroundTextStyle: 'light',

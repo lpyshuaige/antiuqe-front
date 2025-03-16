@@ -20,6 +20,7 @@ import {
   Pagination
 } from '@nutui/nutui-taro'
 
+
 const App = createApp({
   onShow (options) {
     console.log('App onShow.')

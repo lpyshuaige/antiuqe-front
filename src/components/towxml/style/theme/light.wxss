@@ -1,3 +1,5 @@
+/**代码高亮样式**/
+@import '../../parse/highlight/style/github.wxss';
 /*正文样式*/
 .h2w-light {
   color:#333;
@@ -59,5 +61,3 @@
     color:#ccc;
 }
 
-/**代码高亮样式**/
-@import '../../parse/highlight/style/github.wxss';

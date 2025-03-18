@@ -171,21 +171,25 @@ const checkLoginStatus = async () => {
   const token = Taro.getStorageSync('token')
   if (!token) {
     // 未登录，显示登录弹窗
+    console.log('未登录，显示登录弹窗')
     showLoginPopup.value = true
   } else {
     // 已登录，检查授权状态
-    await checkAuthAndStartAnalyze()
+    const userInfo = Taro.getStorageSync('userInfo')
+    console.log('已登录 检查授权')
+    await checkAuthAndStartAnalyze(userInfo)
   }
 }
 
 // 检查授权状态并开始分析
-const checkAuthAndStartAnalyze = async () => {
-  const userInfo = Taro.getStorageSync('userInfo')
-  if (!userInfo || !userInfo.avatarUrl || !userInfo.nickname) {
+const checkAuthAndStartAnalyze = async (userInfo) => {
+  if (!userInfo || !userInfo.nickname || !userInfo.avatarUrl) {
     // 未授权，显示授权弹窗
+    console.log('未授权，显示授权弹窗')
     showAuthPopup.value = true
   } else {
     // 已授权，开始分析
+    console.log('已授权，进入分析')
     await startAnalyzeProcess()
   }
 }
@@ -230,58 +234,10 @@ const startAnalyzeProcess = async () => {
         title: '正在分析中，鉴定结果请到鉴定列表中查找',
         icon: 'none'
       })
+      fileList.value = []
     }else{
       throw new Error(`请求失败，状态码：${res.data.msg}`)
     }
-
-    // 发送请求
-    // const res = await Taro.uploadFile({
-    //   url: `${BASE_URL}/minio/imageUpload`,
-    //   filePath: fileList.value[0].url,  // 第一张图片
-    //   name: 'files',  // 第一张图片的参数名
-    //   formData: formData,  // 只包含其他图片的表单数据
-    //   header: {
-    //     'sessionId': Taro.getStorageSync('token'),
-    //     'content-type': 'multipart/form-data',
-    //     'X-Files-Count': fileList.value.length.toString()  // 添加自定义header表明文件数量
-    //   }
-    // })
-    // console.log('上传结果:', res)
-    // if (res.statusCode === 200){
-    //     const responseData = JSON.parse(res.data)
-    //     if (responseData.code !== 200) {
-    //       throw new Error(responseData.msg || '服务器返回错误')
-    //     }
-    //     Taro.showToast({
-    //         title: '正在分析中，鉴定结果请到鉴定列表中查找',
-    //         icon: 'none'
-    //     })
-    // }else{
-    //   throw new Error(`请求失败，状态码：${res.statusCode}`)
-    // }
-    // // 准备上传的图片数据
-    // const images = fileList.value.map(file => file.url)
-    // // 模拟调用后端分析接口
-    // const response = await new Promise(resolve => {
-    //   setTimeout(() => {
-    //     resolve({
-    //       code: 0,
-    //       data: {
-    //         canViewFullReport: false, // 是否可以查看完整报告
-    //         basicInfo: {
-    //           category: '青花瓷器',
-    //           age: '清代',
-    //           material: '瓷器'
-    //         },
-    //         detailInfo: null // 非会员返回null
-    //       }
-    //     })
-    //   }, 2000)
-    // })
-    // // 跳转到结果页面
-    // Taro.navigateTo({
-    //   url: `/pages/result/index?imageList=${encodeURIComponent(JSON.stringify(images))}&canViewFullReport=${response.data.canViewFullReport}&basicInfo=${encodeURIComponent(JSON.stringify(response.data.basicInfo))}&detailInfo=${encodeURIComponent(JSON.stringify(response.data.detailInfo))}`
-    // })
   } catch (err) {
     console.error('操作失败', err)
     Taro.showToast({
@@ -294,22 +250,22 @@ const startAnalyzeProcess = async () => {
 }
 
 // 处理登录响应
-const handleLoginResponse = () => {
-  console.log('登录成功')
+const handleLoginResponse = (userInfo) => {
+  console.log('登录成功,授权状态')
   showLoginPopup.value = false
   // 登录成功后，检查授权状态
-  checkAuthAndStartAnalyze()
+  checkAuthAndStartAnalyze(userInfo)
 }
 
 // 处理登录弹窗关闭
 const handleLoginClose = () => {
+  console.log('登录弹窗关闭')
   showLoginPopup.value = false
 }
 
 // 处理授权确认
 const handleAuthConfirm = (userInfo) => {
   showAuthPopup.value = false
-  Taro.setStorageSync('userInfo', userInfo)
   console.log('更新用户信息：', userInfo)
   // 授权成功后，开始分析
   startAnalyzeProcess()
@@ -318,37 +274,6 @@ const handleAuthConfirm = (userInfo) => {
 // 处理授权弹窗关闭
 const handleAuthClose = () => {
   showAuthPopup.value = false
-}
-
-const handleUnlock = () => {
-  Taro.showModal({
-    title: '支付确认',
-    content: '是否确认支付￥9.9解锁完整报告？',
-    success: function (res) {
-      if (res.confirm) {
-        // 调用支付接口
-        Taro.requestPayment({
-          timeStamp: '',
-          nonceStr: '',
-          package: '',
-          signType: 'MD5',
-          paySign: '',
-          success: function () {
-            Taro.showToast({
-              title: '支付成功',
-              icon: 'success'
-            })
-          },
-          fail: function () {
-            Taro.showToast({
-              title: '支付失败',
-              icon: 'error'
-            })
-          }
-        })
-      }
-    }
-  })
 }
 </script>
 

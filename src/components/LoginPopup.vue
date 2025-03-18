@@ -17,7 +17,6 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
 import Taro from '@tarojs/taro'
 import { IconFont } from "@nutui/icons-vue-taro"
 import BASE_URL from "../utils/request";
@@ -60,13 +59,14 @@ const handleLogin = async () => {
       const res = await loginRequest(loginRes.code)
       
       // 存储token
-      console.log(res)
       Taro.setStorageSync('token', res.data.data.sessionId)
       Taro.setStorageSync('userInfo', res.data.data)
+      const userInfo = Taro.getStorageSync('userInfo')
       // 通知父组件登录成功，并传递是否已授权的状态
-      emit('login')
+      emit('login',userInfo)
       
       // 关闭登录弹窗
+      emit('update:show', false)
       emit('close')
     }
   } catch (err) {

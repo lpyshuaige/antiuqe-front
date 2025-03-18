@@ -290,8 +290,10 @@ const onPageChange = (page) => {
 // 页面加载时获取订单列表
 onMounted(() => {
   console.log('订单列表页面初次加载')
-  fetchOrders(1)
-  initialLoad.value = false
+  fetchOrders(1).then(() => {
+    console.log('订单列表初次加载完成')
+    initialLoad.value = false
+  })
 })
 
 useDidShow(() => {

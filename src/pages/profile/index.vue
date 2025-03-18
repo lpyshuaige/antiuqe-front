@@ -59,11 +59,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import Taro from '@tarojs/taro'
+import { ref } from 'vue'
+import Taro, {useDidShow} from '@tarojs/taro'
 import { IconFont } from "@nutui/icons-vue"
 import LoginPopup from '../../components/LoginPopup.vue'
 import AuthPopup from '../../components/AuthPopup.vue'
+import BASE_URL from "../../utils/request";
 
 const userInfo = ref(null)
 const showLoginPopup = ref(false)
@@ -75,13 +76,20 @@ const handleLogin = () => {
 }
 
 // 处理登录响应
-const handleLoginResponse = (isAuth: boolean) => {
+const handleLoginResponse = (data) => {
   showLoginPopup.value = false
   // 检查授权状态
-  const userInfo = Taro.getStorageSync('userInfo')
-  if (!userInfo || !userInfo.avatarUrl || !userInfo.nickName) {
+  if (!data || !data.nickname || !data.avatarUrl) {
     // 未授权，显示授权弹窗
+    console.log('未授权，显示授权弹窗')
     showAuthPopup.value = true
+  }else {
+    console.log('已授权')
+    userInfo.value = data
+    Taro.showToast({
+      title: '登录成功',
+      icon: 'success'
+    })
   }
 }
 
@@ -94,9 +102,8 @@ const handleLoginClose = () => {
 const handleAuthConfirm = (info) => {
   showAuthPopup.value = false
   userInfo.value = info
-  Taro.setStorageSync('userInfo', info)
   Taro.showToast({
-    title: '登录成功',
+    title: '授权完成',
     icon: 'success'
   })
 }
@@ -107,10 +114,12 @@ const handleAuthClose = () => {
 }
 
 // 在组件挂载时检查是否有用户信息
-onMounted(() => {
+useDidShow(() => {
+  console.log('检查是否有用户信息')
   try {
     const profile = Taro.getStorageSync('userInfo')
     if (profile) {
+      console.log('已获取用户信息', profile)
       userInfo.value = profile
     }
   } catch (err) {
@@ -168,21 +177,34 @@ const goToUserInfo = () => {
   })
 }
 
-const handleLogout = () => {
+const handleLogout = async () => {
   Taro.showModal({
     title: '提示',
     content: '确定要退出登录吗？',
-    success: function (res) {
+    success: async function (res) {
       if (res.confirm) {
         // 清除用户信息和token
-        Taro.removeStorageSync('userInfo')
-        Taro.removeStorageSync('token')
-        console.log('用户已退出登录')
-        
-        // 立即关闭所有页面，打开个人中心页面
-        Taro.reLaunch({
-          url: '/pages/profile/index'
+        const res = await Taro.request({
+          url: `${BASE_URL}/user/logout`,
+          method: 'GET',
+          header: {
+            'sessionId': Taro.getStorageSync('token')
+          }
         })
+        if (res.statusCode === 200){
+          if (res.data.code !== 200){
+            throw new Error(res.data.msg || '退出登录失败')
+          }
+          userInfo.value = null
+          Taro.removeStorageSync('userInfo')
+          Taro.removeStorageSync('token')
+          console.log('用户已退出登录')
+        }
+
+        // 立即关闭所有页面，打开个人中心页面
+        // Taro.reLaunch({
+        //   url: '/pages/profile/index'
+        // })
       }
     }
   })

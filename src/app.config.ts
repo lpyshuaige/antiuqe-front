@@ -5,7 +5,8 @@ export default defineAppConfig({
     'pages/result/index',
     'pages/history/index',
     'pages/order/detail/index',
-    'pages/order/list/index'
+    'pages/order/list/index',
+    'pages/userInfo/index'
   ],
   window: {
     backgroundTextStyle: 'light',

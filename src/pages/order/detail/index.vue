@@ -80,7 +80,7 @@ const endTime = ref(0)
 
 // 计算支付用途文本
 const paymentPurpose = computed(() => {
-  return orderData.value.inform ? '开通会员' : '购买本次报告'
+  return orderData.value.inform ? '开通会员(一个月)' : '购买本次报告'
 })
 
 // 格式化金额（分转元）
@@ -184,6 +184,13 @@ const handlePay = async () => {
           paySign: payParams.paySign,
           success(res) {
             console.log('支付成功:', res)
+            //inform为true时表示开通会员，更新本地缓存的用户信息
+            if (orderData.value.inform){
+              console.log('开通了会员，更新本地缓存用户信息')
+              const userInfo = Taro.getStorageSync('userInfo')
+              userInfo.isMember = true
+              Taro.setStorageSync('userInfo', userInfo)
+            }
             // 支付成功
             Taro.showToast({
               title: '支付成功',

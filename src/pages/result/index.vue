@@ -16,9 +16,14 @@
 
     <!-- 鉴定报告区域 -->
     <view class="report-section" v-if="!isLoading">
-      <view class="content-box">
+      <!-- 空状态 -->
+      <nut-empty v-if="!reportInfo"
+                 description="报告生成失败，请重新选择图片生成"
+                 image="error">
+      </nut-empty>
+      <view class="content-box" v-else>
         <!-- 报告标题 -->
-        <view class="report-header" v-if="reportInfo">
+        <view class="report-header">
           <view class="report-title">鉴定报告</view>
           <!-- AI生成内容提示 -->
           <view class="ai-disclaimer">

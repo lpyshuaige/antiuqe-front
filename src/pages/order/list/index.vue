@@ -26,7 +26,7 @@
           <view class="order-info">
             <view class="info-row">
               <text class="label">支付用途</text>
-              <text class="value">{{ order.inform ? '开通会员' : '单次解锁报告' }}</text>
+              <text class="value">{{ order.inform ? '开通会员(一个月)' : '单次解锁报告' }}</text>
             </view>
             <view class="info-row">
               <text class="label">支付金额</text>

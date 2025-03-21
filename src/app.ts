@@ -19,11 +19,36 @@ import {
   Empty,
   Pagination
 } from '@nutui/nutui-taro'
+import Taro from "@tarojs/taro";
+import BASE_URL from "./utils/request";
 
 
 const App = createApp({
-  onShow (options) {
-    console.log('App onShow.')
+  onLaunch (options) {
+    const userInfo = Taro.getStorageSync('userInfo')
+    if (userInfo && userInfo.isMember) {
+      console.log('用户目前是会员，检查会员状态');
+      try {
+        Taro.request({
+          url: `${BASE_URL}/user/checkMember`,
+          method: 'GET',
+          header: {
+            'sessionId': Taro.getStorageSync('token')
+          },
+          success: (res) => {
+            if (res.statusCode === 200 && res.data.code === 200){
+              if (res.data.data !== userInfo.isMember){
+                console.log('会员状态发生变化，更新本地缓存')
+                userInfo.isMember = res.data.data
+              }
+              Taro.setStorageSync('userInfo', userInfo)
+            }
+          },
+        })
+      }catch (err){
+        console.log('获取会员状态失败',err)
+      }
+    }
   },
   // 入口组件不需要实现 render 方法，即使实现了也会被 taro 所覆盖
 })

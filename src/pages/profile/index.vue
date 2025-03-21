@@ -10,7 +10,11 @@
         <nut-avatar size="large" class="avatar">
           <img :src="userInfo.avatarUrl" class="avatar-img" />
         </nut-avatar>
-        <text class="nickname">{{ userInfo.nickname || '微信用户' }}</text>
+        <view class="nickname-container">
+          <text class="nickname">{{ userInfo.nickname || '微信用户' }}</text>
+          <!-- 会员标识 -->
+          <view v-if="userInfo && userInfo.isMember" class="member-badge">会员</view>
+        </view>
         <view class="arrow-icon" @tap="goToUserInfo">
           <IconFont name="right" size="16" />
         </view>
@@ -254,11 +258,29 @@ const handleLogout = async () => {
         }
       }
       
-      .nickname {
+      .nickname-container {
         flex: 1;
-        font-size: 16px;
-        color: #333;
-        font-weight: 600;
+        display: flex;
+        align-items: center;
+        
+        .nickname {
+          font-size: 16px;
+          color: #333;
+          font-weight: 600;
+          margin-right: 8px;
+        }
+        
+        .member-badge {
+          background-color: #FFD700;
+          color: #8B4513;
+          font-size: 12px;
+          font-weight: bold;
+          padding: 2px 6px;
+          border-radius: 10px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+        }
       }
 
       .arrow-icon {

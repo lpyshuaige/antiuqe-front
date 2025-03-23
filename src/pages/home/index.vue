@@ -6,12 +6,13 @@
       </view>
 
       <view class="content-section">
-        <view class="upload-section" v-if="current === 0">
+        <view class="upload-section">
           <view class="section-block tips-block">
-            <view class="block-title">拍摄建议</view>
+            <view class="block-title">建议</view>
             <view class="tip-list">
               <view class="tip-item">请尽可能多的拍摄物品的不同角度（正面、底部、侧面等）</view>
-              <view class="tip-item">确保光线充足，画面清晰，背景简洁</view>
+              <view class="tip-item">确保光线充足，画面清晰，背景简洁，突出主体</view>
+              <view class="tip-item">鉴定结果请到“我的-鉴定记录”中查看</view>
             </view>
           </view>
           
@@ -71,7 +72,6 @@ import AuthPopup from '../../components/AuthPopup.vue'
 import { IconFont } from "@nutui/icons-vue-taro"
 import BASE_URL from "../../utils/request";
 
-const current = ref(0)
 const fileList = ref([])
 const isLoading = ref(false)
 const showLoginPopup = ref(false)
@@ -98,10 +98,6 @@ const onOversize = () => {
   })
 }
 
-// 上传成功回调
-const onSuccess = (response: any, file: any) => {
-  console.log('上传成功', response, file)
-}
 
 // 修改上传组件的实现
 const handleUpload = () => {

@@ -3,13 +3,14 @@
     <!-- 倒计时区域 -->
     <view class="countdown-section">
       <view class="countdown-wrapper">
+        <text class="countdown-label">倒计时: </text>
         <nut-countdown
           :end-time="endTime"
           format="mm分ss秒"
           @on-end="handleTimeEnd"
         />
       </view>
-      <text class="countdown-tip">超过时间未支付则报告会自动删除，需重新鉴定</text>
+<!--      <text class="countdown-tip">超过时间未支付则报告会自动删除，需重新鉴定</text>-->
     </view>
 
     <!-- 订单信息区域 -->

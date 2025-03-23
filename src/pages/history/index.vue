@@ -47,6 +47,14 @@
             >
               {{ record.isFinished ? '查看' : '生成中' }}
             </nut-button>
+            <nut-button 
+              type="default" 
+              size="small" 
+              class="delete-btn"
+              @click="handleDelete(record)"
+            >
+              删除
+            </nut-button>
           </view>
         </view>
       </view>
@@ -255,6 +263,69 @@ const onPageChange = (page) => {
   fetchRecords(page)
 }
 
+// 添加删除报告的处理函数
+const handleDelete = (record) => {
+  // 自定义提示信息，根据报告状态不同显示不同内容
+  const confirmMessage = record.isFinished 
+    ? '确定删除这条鉴定记录吗？' 
+    : '该记录尚未生成完成，确定删除吗？';
+    
+  Taro.showModal({
+    title: '提示',
+    content: confirmMessage,
+    success: async function (res) {
+      if (res.confirm) {
+        try {
+          const token = Taro.getStorageSync('token')
+          if (!token) {
+            Taro.showToast({
+              title: '请先登录',
+              icon: 'none'
+            })
+            return
+          }
+
+          loading.value = true
+          console.log('删除鉴定记录id：', record.id)
+          // 调用删除接口
+          const response = await Taro.request({
+            url: `${BASE_URL}/report/deleteReport?id=${record.id}`,
+            method: 'POST',
+            header: {
+              'sessionId': token
+            }
+          })
+
+          console.log('删除鉴定记录响应：', response)
+
+          if (response.statusCode === 200 && response.data.code === 200) {
+            Taro.showToast({
+              title: '删除成功',
+              icon: 'success'
+            })
+            loading.value = false
+            // 刷新记录列表
+            await fetchRecords(currentPage.value)
+          } else {
+            Taro.showToast({
+              title: response.data.msg || '删除失败',
+              icon: 'none'
+            })
+          }
+        } catch (error) {
+          console.error('删除记录失败:', error)
+          Taro.showToast({
+            title: '网络错误',
+            icon: 'none'
+          })
+        } finally {
+          loading.value = false
+        }
+      }
+    }
+  })
+}
+
 // 页面加载时获取记录
 onMounted(() => {
   fetchRecords(1)
@@ -331,8 +402,10 @@ onMounted(() => {
         position: relative;
         display: flex;
         align-items: center;
+        justify-content: space-between;
         
         .image-container {
+          flex: 1;
           display: flex;
           flex-direction: column;
           
@@ -340,7 +413,7 @@ onMounted(() => {
             display: flex;
             gap: 8px;
             margin-bottom: 8px;
-            width: 208px; /* 两张图片的宽度(100px*2)加上间距(8px) */
+            max-width: 208px; /* 两张图片的宽度(100px*2)加上间距(8px) */
             
             .record-image {
               width: 100px;
@@ -359,7 +432,10 @@ onMounted(() => {
         }
         
         .record-action {
-          margin-left: auto;
+          margin-left: 16px;
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
           
           .view-btn {
             width: 80px;
@@ -370,6 +446,16 @@ onMounted(() => {
             &[disabled] {
               opacity: 0.6;
             }
+          }
+          
+          .delete-btn {
+            width: 80px;
+            height: 36px;
+            border-radius: 18px;
+            font-size: 14px;
+            background: #f5f5f5;
+            border-color: #f5f5f5;
+            color: #666;
           }
         }
       }

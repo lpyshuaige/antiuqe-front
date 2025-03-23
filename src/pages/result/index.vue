@@ -16,9 +16,14 @@
 
     <!-- 鉴定报告区域 -->
     <view class="report-section" v-if="!isLoading">
-      <view class="content-box">
+      <!-- 空状态 -->
+      <nut-empty v-if="!reportInfo"
+                 description="报告生成失败，请重新选择图片生成"
+                 image="error">
+      </nut-empty>
+      <view class="content-box" v-else>
         <!-- 报告标题 -->
-        <view class="report-header" v-if="reportInfo">
+        <view class="report-header">
           <view class="report-title">鉴定报告</view>
           <!-- AI生成内容提示 -->
           <view class="ai-disclaimer">
@@ -130,31 +135,30 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed, watch } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import Taro, { useDidShow } from '@tarojs/taro'
 import { Close, CheckNormal, CheckChecked, RectDown } from '@nutui/icons-vue-taro'
 import BASE_URL from "../../utils/request";
-import towxml from '../../components/towxml';
+import towxml from '../../components/towxml/index';
 
 // 页面参数
 const imageList = ref<string[]>([])
 const canViewFullReport = ref(false)
 const showPaymentPopup = ref(false)
 const selectedOption = ref('member')
-const userInfo = ref(null)
 const contentRef = ref(null)
 const isLoading = ref(true)
 const reportInfo = ref(null)
 const reportId = ref('')  // 存储报告ID，用于onShow时重新获取
-const markdownData = ref(null) // 存储解析后的markdown数据
+const markdownData = ref({}) // 存储解析后的markdown数据
 
 // 定义初始显示的内容和完整内容
 const markdownContent = ref('')
 
 // 处理Markdown内容
 const parseMarkdown = (content) => {
-  if (!content) return null
-  
+  if (!content) return {}
+
   try {
     // 如果不能查看完整报告，则只显示部分内容
     let mdContent = content
@@ -166,14 +170,19 @@ const parseMarkdown = (content) => {
       if (cutoffIndex === -1) {
         cutoffIndex = oneThirdLength
       }
+      // 确保不会截断标题
+      const lastTitleIndex = content.slice(0, cutoffIndex).lastIndexOf('##')
+      if (lastTitleIndex !== -1) {
+        cutoffIndex = lastTitleIndex
+      }
       mdContent = content.slice(0, cutoffIndex)
     }
-    
+    console.log('处理后的Markdown内容:', mdContent)
     // 使用towxml解析markdown
     return towxml(mdContent, 'markdown')
   } catch (error) {
     console.error('解析Markdown失败:', error)
-    return null
+    return {}
   }
 }
 
@@ -182,15 +191,7 @@ const formattedContent = computed(() => {
   if (!reportInfo.value) return ''
   
   let content = ''
-  
-  // 直接使用reportInfo作为内容（现在确定它是字符串）
-  if (typeof reportInfo.value === 'string') {
-    content = reportInfo.value
-  } else if (reportInfo.value && reportInfo.value.description) {
-    // 兼容旧版本，如果有description字段
-    content = reportInfo.value.description
-  }
-  
+  content = reportInfo.value
   // 如果不能查看完整报告，则只显示部分内容
   if (!canViewFullReport.value && content) {
     // 计算三分之一的长度
@@ -200,6 +201,11 @@ const formattedContent = computed(() => {
     if (cutoffIndex === -1) {
       cutoffIndex = oneThirdLength
     }
+    // 确保不会截断标题
+    const lastTitleIndex = content.slice(0, cutoffIndex).lastIndexOf('##')
+    if (lastTitleIndex !== -1) {
+      cutoffIndex = lastTitleIndex
+    }
     content = content.slice(0, cutoffIndex)
   }
   
@@ -207,23 +213,6 @@ const formattedContent = computed(() => {
   return content.replace(/\n/g, '<br/>')
 })
 
-// 监听reportInfo和canViewFullReport的变化，更新markdown内容
-watch([() => reportInfo.value, canViewFullReport], () => {
-  if (reportInfo.value) {
-    // 直接使用reportInfo作为markdown内容
-    markdownContent.value = typeof reportInfo.value === 'string' 
-      ? reportInfo.value 
-      : (reportInfo.value.description || '')
-    
-    // 解析markdown内容
-    if (markdownContent.value) {
-      markdownData.value = parseMarkdown(markdownContent.value)
-    }
-  }
-}, { immediate: true })
-
-// 详细信息（仅会员可见）
-const detailInfo = ref([])
 
 // 计算图片网格布局类名
 const gridLayoutClass = computed(() => {
@@ -247,48 +236,17 @@ onMounted(() => {
   Taro.setNavigationBarTitle({
     title: '鉴定结果'
   })
-
-  // 获取用户信息和会员状态
-  try {
-    const profile = Taro.getStorageSync('userInfo')
-    if (profile) {
-      userInfo.value = profile
-    }
-  } catch (err) {
-    console.error('获取用户信息失败', err)
-  }
-
   const params = Taro.getCurrentInstance().router?.params
+  console.log('页面参数:', params)
   if (params) {
     // 如果有ID参数，则通过ID获取鉴定记录详情
     if (params.id) {
       reportId.value = params.id  // 保存报告ID
-      fetchReportDetail(params.id)
+      fetchReportDetail(params.id).then(() => {
+        isLoading.value = false  // 加载完成
+      })
     } else {
-      // 否则，使用传递的参数
-      // 获取并设置图片列表
-      try {
-        const imageListData = JSON.parse(decodeURIComponent(params.imageList || '[]'))
-        imageList.value = imageListData
-      } catch (error) {
-        console.error('解析图片列表失败', error)
-      }
-      
-      // 获取并设置是否可以查看完整报告
-      canViewFullReport.value = params.canViewFullReport === 'true'
-      
-      // 获取并设置详细信息（仅会员）
-      if (canViewFullReport.value && params.detailInfo) {
-        try {
-          const detailInfoData = JSON.parse(decodeURIComponent(params.detailInfo || '[]'))
-          detailInfo.value = detailInfoData
-        } catch (error) {
-          console.error('解析详细信息失败', error)
-        }
-      }
-      
-      // 直接设置isLoading为false
-      isLoading.value = false
+      throw new Error('未找到报告ID')
     }
   }
 })
@@ -297,7 +255,7 @@ onMounted(() => {
 useDidShow(() => {
   console.log('鉴定报告页面显示，检查是否需要刷新报告状态')
   // 如果有报告ID，重新获取报告详情以更新支付状态
-  if (reportId.value) {
+  if (!isLoading.value && reportId.value) {
     console.log('重新获取报告详情，ID:', reportId.value)
     fetchReportDetail(reportId.value)
   }
@@ -347,20 +305,17 @@ const fetchReportDetail = async (id) => {
     
     if (res.statusCode === 200 && res.data.code === 200) {
       const { id, info, canShow } = res.data.data
-      
+      // 根据后端返回的canShow字段决定用户是否能查看完整报告
+      canViewFullReport.value = canShow
+      console.log('用户是否可以查看完整报告:', canViewFullReport.value ? '是' : '否')
       // 设置报告内容 - 简化处理，直接使用info字符串
       if (info) {
         reportInfo.value = info
         markdownContent.value = info
-        console.log('设置markdown内容:', info.substring(0, 100) + '...')
-        
         // 解析markdown内容
         markdownData.value = parseMarkdown(info)
       }
-      
-      // 根据后端返回的canShow字段决定用户是否能查看完整报告
-      canViewFullReport.value = canShow
-      console.log('用户是否可以查看完整报告:', canViewFullReport.value ? '是' : '否')
+
     } else {
       Taro.showToast({
         title: res.data.msg || '获取详情失败',

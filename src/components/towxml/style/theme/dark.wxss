@@ -1,3 +1,5 @@
+/**代码高亮样式**/
+@import '../../parse/highlight/style/monokai.wxss';
 /*正文样式*/
 .h2w-dark {
   color:#ddd;
@@ -69,5 +71,4 @@
     color:#494949;
 }
 
-/**代码高亮样式**/
-@import '../../parse/highlight/style/monokai.wxss';
+

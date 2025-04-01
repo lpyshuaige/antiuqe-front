@@ -2,7 +2,7 @@
   <view class="container">
     <view class="home-container">
       <view class="header-section">
-        <text class="title">古玩鉴别</text>
+        <text class="title">Ai鉴宝</text>
       </view>
 
       <view class="content-section">

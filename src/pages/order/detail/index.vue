@@ -5,9 +5,11 @@
       <view class="countdown-wrapper">
         <text class="countdown-label">倒计时: </text>
         <nut-countdown
+          class="countdown-timer"
           :end-time="endTime"
           format="mm分ss秒"
           @on-end="handleTimeEnd"
+          :custom-style="{fontSize: '16px', fontWeight: 500}"
         />
       </view>
 <!--      <text class="countdown-tip">超过时间未支付则报告会自动删除，需重新鉴定</text>-->
@@ -312,10 +314,24 @@ onMounted(() => {
     border-radius: 8px;
     padding: 20px;
     margin-bottom: 16px;
-    text-align: center;
+    text-align: left;
 
     .countdown-wrapper {
       margin-bottom: 12px;
+      display: flex;
+      justify-content: flex-start;
+      align-items: center;
+      
+      .countdown-label {
+        font-size: 16px;
+        font-weight: 500;
+        margin-right: 6px;
+      }
+      
+      .countdown-timer {
+        display: inline-flex;
+        font-size: 16px;
+      }
     }
 
     .countdown-tip {

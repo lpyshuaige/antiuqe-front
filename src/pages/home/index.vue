@@ -10,33 +10,127 @@
           <view class="section-block tips-block">
             <view class="block-title">建议</view>
             <view class="tip-list">
-              <view class="tip-item">请尽可能多的拍摄物品的不同角度（正面、底部、侧面等）</view>
+              <view class="tip-item">请尽可能多的拍摄物品的不同角度（整体器形、底部、口沿、器内、微观特征）</view>
               <view class="tip-item">确保光线充足，画面清晰，背景简洁，突出主体</view>
-              <view class="tip-item">鉴定结果请到“我的-鉴定记录”中查看</view>
+              <view class="tip-item">鉴定结果请到<text class="link-text" @tap="goToHistory">鉴定记录</text>中查看</view>
             </view>
           </view>
           
           <view class="section-block upload-block">
             <view class="block-title">上传图片</view>
             <view class="upload-content">
-              <view class="image-list">
-                <view 
-                  v-for="(file, index) in fileList" 
-                  :key="index"
-                  class="image-item"
-                >
-                  <image :src="file.url" mode="aspectFill" class="preview-image" />
-                  <view class="delete-icon" @tap="onDelete(file, index)">
-                    <IconFont name="close" size="12" color="#fff" />
+              <view class="upload-grid">
+                <!-- 整体器形-正面 -->
+                <view class="upload-item">
+                  <view class="upload-item-title">
+                    <text class="required">*</text>
+                    整体正面
+                  </view>
+                  <view class="image-container">
+                    <view v-if="imageMap.front" class="image-preview">
+                      <image :src="imageMap.front.url" mode="aspectFill" class="preview-image" />
+                      <view class="delete-icon" @tap="onDelete('front')">
+                        <IconFont name="close" size="12" color="#fff" />
+                      </view>
+                    </view>
+                    <view v-else class="upload-box" @tap="handleUpload('front')">
+                      <view class="upload-hint">点击上传</view>
+                    </view>
                   </view>
                 </view>
-                <view 
-                  class="upload-box"
-                  v-if="fileList.length < 6"
-                  @tap="handleUpload"
-                >
-                  <view class="upload-hint">点击上传</view>
-                  <view class="upload-desc">最多6张照片</view>
+
+                <!-- 整体器形-反面 -->
+                <view class="upload-item">
+                  <view class="upload-item-title">
+                    <text class="required">*</text>
+                    整体反面
+                  </view>
+                  <view class="image-container">
+                    <view v-if="imageMap.back" class="image-preview">
+                      <image :src="imageMap.back.url" mode="aspectFill" class="preview-image" />
+                      <view class="delete-icon" @tap="onDelete('back')">
+                        <IconFont name="close" size="12" color="#fff" />
+                      </view>
+                    </view>
+                    <view v-else class="upload-box" @tap="handleUpload('back')">
+                      <view class="upload-hint">点击上传</view>
+                    </view>
+                  </view>
+                </view>
+
+                <!-- 底部 -->
+                <view class="upload-item">
+                  <view class="upload-item-title">
+                    <text class="required">*</text>
+                    底部
+                  </view>
+                  <view class="image-container">
+                    <view v-if="imageMap.bottom" class="image-preview">
+                      <image :src="imageMap.bottom.url" mode="aspectFill" class="preview-image" />
+                      <view class="delete-icon" @tap="onDelete('bottom')">
+                        <IconFont name="close" size="12" color="#fff" />
+                      </view>
+                    </view>
+                    <view v-else class="upload-box" @tap="handleUpload('bottom')">
+                      <view class="upload-hint">点击上传</view>
+                    </view>
+                  </view>
+                </view>
+
+                <!-- 口沿 -->
+                <view class="upload-item">
+                  <view class="upload-item-title">
+                    <text class="required">*</text>
+                    口沿
+                  </view>
+                  <view class="image-container">
+                    <view v-if="imageMap.rim" class="image-preview">
+                      <image :src="imageMap.rim.url" mode="aspectFill" class="preview-image" />
+                      <view class="delete-icon" @tap="onDelete('rim')">
+                        <IconFont name="close" size="12" color="#fff" />
+                      </view>
+                    </view>
+                    <view v-else class="upload-box" @tap="handleUpload('rim')">
+                      <view class="upload-hint">点击上传</view>
+                    </view>
+                  </view>
+                </view>
+
+                <!-- 器内 -->
+                <view class="upload-item">
+                  <view class="upload-item-title">
+                    <text class="required">*</text>
+                    器内
+                  </view>
+                  <view class="image-container">
+                    <view v-if="imageMap.inside" class="image-preview">
+                      <image :src="imageMap.inside.url" mode="aspectFill" class="preview-image" />
+                      <view class="delete-icon" @tap="onDelete('inside')">
+                        <IconFont name="close" size="12" color="#fff" />
+                      </view>
+                    </view>
+                    <view v-else class="upload-box" @tap="handleUpload('inside')">
+                      <view class="upload-hint">点击上传</view>
+                    </view>
+                  </view>
+                </view>
+
+                <!-- 微观特征 -->
+                <view class="upload-item">
+                  <view class="upload-item-title">
+                    微观特征
+                  </view>
+                  <view class="image-container">
+                    <view v-if="imageMap.micro" class="image-preview">
+                      <image :src="imageMap.micro.url" mode="aspectFill" class="preview-image" />
+                      <view class="delete-icon" @tap="onDelete('micro')">
+                        <IconFont name="close" size="12" color="#fff" />
+                      </view>
+                    </view>
+                    <view v-else class="upload-box" @tap="handleUpload('micro')">
+                      <view class="upload-hint">点击上传</view>
+                    </view>
+                  </view>
                 </view>
               </view>
             </view>
@@ -65,20 +159,34 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import Taro from '@tarojs/taro'
 import LoginPopup from '../../components/LoginPopup.vue'
 import AuthPopup from '../../components/AuthPopup.vue'
 import { IconFont } from "@nutui/icons-vue-taro"
 import BASE_URL from "../../utils/request";
 
-const fileList = ref([])
+// 图片映射对象
+const imageMap = ref({
+  front: null,  // 整体器形-正面
+  back: null,   // 整体器形-反面
+  bottom: null, // 底部
+  rim: null,    // 口沿
+  inside: null, // 器内
+  micro: null   // 微观特征
+})
+
+// 修改文件列表的获取方式
+const fileList = computed(() => {
+  return Object.values(imageMap.value).filter(item => item !== null)
+})
+
 const isLoading = ref(false)
 const showLoginPopup = ref(false)
 const showAuthPopup = ref(false)
 
 // 删除前的回调
-const onBeforeDelete = (file: any) => {
+const onBeforeDelete = (type: string) => {
   return new Promise((resolve) => {
     Taro.showModal({
       title: '提示',
@@ -98,61 +206,69 @@ const onOversize = () => {
   })
 }
 
+// 删除图片回调
+const onDelete = async (type: string) => {
+  const result = await onBeforeDelete(type)
+  if (result) {
+    imageMap.value[type] = null
+  }
+}
 
 // 修改上传组件的实现
-const handleUpload = () => {
+const handleUpload = (type: string) => {
   Taro.chooseImage({
-    count: 6 - fileList.value.length,
+    count: 1,
     sizeType: ['compressed'],
     sourceType: ['album', 'camera'],
     success: async function (res) {
-      // 选择图片成功
-      const tempFilePaths = res.tempFilePaths
-      const tempFiles = res.tempFiles
+      const tempFilePath = res.tempFilePaths[0]
+      const tempFile = res.tempFiles[0]
 
       // 检查文件大小
-      const oversizeFiles = tempFiles.filter(file => file.size > 10 * 1024 * 1024)
-      if (oversizeFiles.length > 0) {
+      if (tempFile.size > 10 * 1024 * 1024) {
         onOversize()
         return
       }
 
-      // 添加到文件列表
-      const newFiles = tempFilePaths.map(path => ({
-        url: path,
+      // 添加到对应的位置
+      imageMap.value[type] = {
+        url: tempFilePath,
         status: 'success',
         message: '上传成功',
         type: 'image'
-      }))
-      fileList.value = [...fileList.value, ...newFiles]
+      }
 
-      // 预加载图片以确保可以显示
-      for (const file of newFiles) {
-        try {
-          await Taro.getImageInfo({
-            src: file.url
-          })
-        } catch (error) {
-          console.error('图片预加载失败', error)
-        }
+      // 预加载图片
+      try {
+        await Taro.getImageInfo({
+          src: tempFilePath
+        })
+      } catch (error) {
+        console.error('图片预加载失败', error)
       }
     }
   })
 }
 
-// 删除图片回调
-const onDelete = async (file: any, index: number) => {
-  const result = await onBeforeDelete(file)
-  if (result) {
-    fileList.value = fileList.value.filter((_, i) => i !== index)
-  }
-}
-
+// 开始分析前的验证
 const startAnalyze = async () => {
-  if (isLoading.value) return  // 如果正在加载中，直接返回
-  if (fileList.value.length === 0) {
+  if (isLoading.value) return
+
+  // 检查必填图片是否都已上传
+  const requiredTypes = ['front', 'back', 'bottom', 'rim', 'inside']
+  const missingTypes = requiredTypes.filter(type => !imageMap.value[type])
+
+  if (missingTypes.length > 0) {
+    const typeNames = {
+      front: '整体器形-正面',
+      back: '整体器形-反面',
+      bottom: '底部',
+      rim: '口沿',
+      inside: '器内'
+    }
+    const missingNames = missingTypes.map(type => typeNames[type]).join('、')
     Taro.showToast({
-      title: '请先上传图片',
+      title: `请上传${missingNames}的图片`,
       icon: 'none'
     })
     return
@@ -230,7 +346,7 @@ const startAnalyzeProcess = async () => {
         title: '正在分析中，鉴定结果请到鉴定列表中查找',
         icon: 'none'
       })
-      fileList.value = []
+      imageMap.value = {}
     }else{
       throw new Error(`请求失败，状态码：${res.data.msg}`)
     }
@@ -270,6 +386,29 @@ const handleAuthConfirm = (userInfo) => {
 // 处理授权弹窗关闭
 const handleAuthClose = () => {
   showAuthPopup.value = false
+}
+
+// 跳转到鉴定记录页面
+const goToHistory = () => {
+  const token = Taro.getStorageSync('token')
+  if (!token) {
+    Taro.showToast({
+      title: '请先登录',
+      icon: 'none'
+    })
+    showLoginPopup.value = true
+    return
+  }
+
+  Taro.navigateTo({
+    url: '/pages/history/index'
+  }).catch(err => {
+    console.error('跳转鉴定记录页面失败', err)
+    Taro.showToast({
+      title: '跳转失败',
+      icon: 'none'
+    })
+  })
 }
 </script>
 
@@ -362,24 +501,57 @@ const handleAuthClose = () => {
           margin-right: 8px;
           color: #1296db;
         }
+
+        .link-text {
+          color: #1296db;
+          text-decoration: none;
+          
+          &:active {
+            opacity: 0.8;
+          }
+        }
       }
     }
   }
 
   .upload-block {
     .upload-content {
-      .image-list {
-        display: flex;
-        flex-wrap: wrap;
+      .upload-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
         gap: 12px;
-        
-        .image-item {
-          width: 100px;
-          height: 100px;
-          position: relative;
+        padding: 0 12px;
+      }
+
+      .upload-item {
+        .upload-item-title {
+          font-size: 14px;
+          color: #333;
+          margin-bottom: 8px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+
+          .required {
+            color: #f56c6c;
+            margin-right: 2px;
+          }
+        }
+
+        .image-container {
+          width: 100%;
+          aspect-ratio: 1;
           border-radius: 8px;
           overflow: hidden;
+        }
+
+        .image-preview {
+          width: 100%;
+          height: 100%;
+          position: relative;
           border: 1px solid #eee;
+          border-radius: 8px;
+          overflow: hidden;
 
           .preview-image {
             width: 100%;
@@ -404,11 +576,12 @@ const handleAuthClose = () => {
         }
 
         .upload-box {
-          width: 100px;
-          height: 100px;
+          width: 100%;
+          height: 100%;
           background-color: #f8fafd;
-          border: 1px dashed #1296db;
-          border-radius: 8px;
+          border-right: 1px dashed #1296db;
+          border-bottom: 1px dashed #1296db;
+          border-radius: 0 0 8px 0;
           display: flex;
           flex-direction: column;
           align-items: center;
@@ -422,12 +595,6 @@ const handleAuthClose = () => {
           .upload-hint {
             font-size: 14px;
             color: #1296db;
-            margin-bottom: 4px;
-          }
-
-          .upload-desc {
-            font-size: 12px;
-            color: #999;
           }
         }
       }

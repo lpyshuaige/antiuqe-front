@@ -32,8 +32,8 @@
         <nut-cell title="联系作者" is-link @click="handleService">
           <template #icon><IconFont name="service" size="16"></IconFont></template>
         </nut-cell>
-        <nut-cell title="关于作者" is-link @click="handleAbout">
-          <template #icon><IconFont name="issue" size="16"></IconFont></template>
+        <nut-cell title="设置" is-link @click="handleAbout">
+          <template #icon><IconFont name="setting" size="16"></IconFont></template>
         </nut-cell>
       </nut-cell-group>
 
@@ -63,7 +63,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import {onMounted, ref} from 'vue'
 import Taro, {useDidShow} from '@tarojs/taro'
 import { IconFont } from "@nutui/icons-vue"
 import LoginPopup from '../../components/LoginPopup.vue'
@@ -118,7 +118,7 @@ const handleAuthClose = () => {
 }
 
 // 在组件挂载时检查是否有用户信息
-useDidShow(() => {
+onMounted(() => {
   console.log('检查是否有用户信息')
   try {
     const profile = Taro.getStorageSync('userInfo')

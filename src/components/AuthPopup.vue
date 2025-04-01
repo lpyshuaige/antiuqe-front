@@ -38,6 +38,19 @@
             placeholder="请输入昵称" 
           />
         </view>
+        
+        <!-- 隐私协议勾选区域 -->
+        <view class="agreement-section">
+          <view class="agreement-container">
+            <nut-checkbox v-model="agreedToTerms" icon-size="14" class="checkbox" />
+            <view class="agreement-text-container">
+              <text class="agreement-text">我已阅读并同意</text>
+              <text class="agreement-link" @tap.stop="openPrivacyContract">《隐私协议》</text>
+              <text class="agreement-text">和</text>
+              <text class="agreement-link" @tap.stop="openUserAgreement">《用户注册与服务协议》</text>
+            </view>
+          </view>
+        </view>
 
         <view class="button-group">
           <nut-button 
@@ -82,9 +95,10 @@ const emit = defineEmits(['update:show', 'confirm', 'close'])
 
 const avatarUrl = ref('')
 const nickname = ref('')
+const agreedToTerms = ref(false)
 
 const isValid = computed(() => {
-  return avatarUrl.value && nickname.value
+  return avatarUrl.value && nickname.value && agreedToTerms.value
 })
 
 const onChooseAvatar = (e) => {
@@ -98,8 +112,67 @@ const onNickNameChange = (e) => {
   nickname.value = newNickName
 }
 
+// 打开隐私协议
+const openPrivacyContract = () => {
+  try {
+    console.log('打开隐私协议')
+    Taro.openPrivacyContract({
+      success: () => {
+        console.log('打开隐私协议成功')
+      },
+      fail: (err) => {
+        console.error('打开隐私协议失败', err)
+        // 如果微信API调用失败，尝试跳转到自定义页面
+        Taro.navigateTo({
+          url: '/pages/privacy/index'
+        }).catch(e => {
+          console.error('跳转隐私协议页面失败', e)
+          Taro.showToast({
+            title: '打开隐私协议失败',
+            icon: 'none'
+          })
+        })
+      }
+    })
+  } catch (error) {
+    console.error('调用隐私协议API失败', error)
+    // 降级处理：尝试跳转到自定义页面
+    Taro.navigateTo({
+      url: '/pages/privacy/index'
+    }).catch(e => {
+      console.error('跳转隐私协议页面失败', e)
+      Taro.showToast({
+        title: '打开隐私协议失败',
+        icon: 'none'
+      })
+    })
+  }
+}
+
+// 打开用户协议
+const openUserAgreement = () => {
+  console.log('打开用户协议')
+  Taro.navigateTo({
+    url: '/pages/agreement/index'
+  }).catch(err => {
+    console.error('打开用户协议失败', err)
+    Taro.showToast({
+      title: '打开用户协议失败',
+      icon: 'none'
+    })
+  })
+}
+
 const handleConfirm = async () => {
-  if (!isValid.value) {
+  if (!agreedToTerms.value) {
+    Taro.showToast({
+      title: '请先阅读并同意协议',
+      icon: 'none'
+    })
+    return
+  }
+  
+  if (!avatarUrl.value || !nickname.value) {
     Taro.showToast({
       title: '请完善头像和昵称',
       icon: 'none'
@@ -287,6 +360,40 @@ const handleClose = () => {
         &::placeholder {
           color: #999;
         }
+      }
+    }
+
+    /* 协议勾选样式 */
+    .agreement-section {
+      margin-top: 16px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 12px;
+      color: #666;
+      line-height: 20px;
+      
+      .agreement-container {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      
+      .checkbox {
+        margin-right: 5px;
+      }
+      
+      .agreement-text-container {
+        display: flex;
+        align-items: center;
+      }
+      
+      .agreement-text {
+        color: #666;
+      }
+      
+      .agreement-link {
+        color: #07c160;
       }
     }
 

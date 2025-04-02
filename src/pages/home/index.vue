@@ -160,7 +160,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import Taro from '@tarojs/taro'
+import Taro, { useShareAppMessage } from '@tarojs/taro'
 import LoginPopup from '../../components/LoginPopup.vue'
 import AuthPopup from '../../components/AuthPopup.vue'
 import { IconFont } from "@nutui/icons-vue-taro"
@@ -410,6 +410,13 @@ const goToHistory = () => {
     })
   })
 }
+
+useShareAppMessage(() => {
+  return {
+    title: '一款为您鉴宝的小程序',
+    path: '/pages/home/index'
+  }
+})
 </script>
 
 <style lang="scss">

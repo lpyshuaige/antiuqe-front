@@ -1,3 +1,4 @@
 export default {
-  navigationBarTitleText: '古玩鉴别'
+  navigationBarTitleText: '古玩鉴别',
+  enableShareAppMessage: true
 } 

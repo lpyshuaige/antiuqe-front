@@ -17,14 +17,15 @@ import {
   Form,
   FormItem,
   Empty,
-  Pagination
+  Pagination,
+  Switch
 } from '@nutui/nutui-taro'
 import Taro from "@tarojs/taro";
 import BASE_URL from "./utils/request";
 
 
 const App = createApp({
-  onLaunch (options) {
+  onLaunch () {
     const userInfo = Taro.getStorageSync('userInfo')
     if (userInfo && userInfo.isMember) {
       console.log('用户目前是会员，检查会员状态');
@@ -67,5 +68,6 @@ App.use(Button)
    .use(FormItem)
    .use(Empty)
    .use(Pagination)
+   .use(Switch)
 
 export default App

@@ -29,7 +29,7 @@
         <nut-cell title="鉴定记录" is-link @click="handleHistory">
           <template #icon><IconFont name="clock" size="16"></IconFont></template>
         </nut-cell>
-        <nut-cell title="联系作者" is-link @click="handleService">
+        <nut-cell title="联系客服" is-link @click="handleService">
           <template #icon><IconFont name="service" size="16"></IconFont></template>
         </nut-cell>
         <nut-cell title="设置" is-link @click="handleAbout">
@@ -160,18 +160,16 @@ const handleHistory = () => {
 }
 
 const handleService = () => {
-  // 打开客服会话
-  Taro.showToast({
-    title: '暂未开放',
-    icon: 'none'
+  // 跳转到联系作者页面
+  Taro.navigateTo({
+    url: '/pages/contact/index'
   })
 }
 
 const handleAbout = () => {
-  // 跳转到关于我们页面
-  Taro.showToast({
-    title: '暂未开放',
-    icon: 'none'
+  // 跳转到设置页面
+  Taro.navigateTo({
+    url: '/pages/settings/index'
   })
 }
 

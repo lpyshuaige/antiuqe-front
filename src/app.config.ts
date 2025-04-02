@@ -7,7 +7,9 @@ export default defineAppConfig({
     'pages/order/detail/index',
     'pages/order/list/index',
     'pages/userInfo/index',
-    'pages/agreement/index'
+    'pages/agreement/index',
+    'pages/contact/index',
+    'pages/settings/index'
   ],
   window: {
     backgroundTextStyle: 'light',

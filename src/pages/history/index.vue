@@ -75,7 +75,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed, watch } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import Taro from '@tarojs/taro'
 import BASE_URL from "../../utils/request";
 
@@ -83,7 +83,7 @@ import BASE_URL from "../../utils/request";
 // 记录列表
 const recordList = ref([])
 const currentPage = ref(1)
-const pageSize = ref(3)
+const pageSize = ref(5)
 const loading = ref(false)
 const totalItems = ref(0)
 

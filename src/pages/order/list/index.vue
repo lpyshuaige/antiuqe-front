@@ -85,7 +85,7 @@ import BASE_URL from "../../../utils/request";
 // 订单列表
 const orderPoList = ref([])
 const currentPage = ref(1)
-const pageSize = ref(10)
+const pageSize = ref(5)
 const loading = ref(false)
 const totalItems = ref(0)
 

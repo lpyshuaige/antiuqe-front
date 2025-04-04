@@ -52,6 +52,7 @@ import { ref, onMounted, computed } from 'vue'
 import Taro from '@tarojs/taro'
 import { Countdown, Button } from '@nutui/nutui-taro'
 import BASE_URL from "../../../utils/request";
+import log from "../../../utils/log";
 
 // 注册组件
 const NutButton = Button
@@ -248,6 +249,7 @@ const handlePay = async () => {
     }
   } catch (error) {
     console.error('请求支付接口失败:', error)
+    log.error('请求支付接口失败:', error)
     Taro.showToast({
       title: '网络错误',
       icon: 'none'

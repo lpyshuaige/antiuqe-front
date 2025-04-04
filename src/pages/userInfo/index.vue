@@ -43,6 +43,7 @@
 import { ref, onMounted } from 'vue'
 import Taro from '@tarojs/taro'
 import BASE_URL from "../../utils/request";
+import log from "../../utils/log";
 
 const userInfo = ref({
   avatarUrl: '',
@@ -112,6 +113,7 @@ const handleConfirm = async () => {
       throw new Error(`请求失败，状态码：${res.statusCode}`)
     }
   } catch (error) {
+    log.error('修改失败，请重试', error)
     console.error('修改详细错误：', error)
     Taro.showToast({
       title: '修改失败，请重试',

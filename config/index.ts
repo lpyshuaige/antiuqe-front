@@ -35,6 +35,9 @@ const config = {
   sass:{
     data: `@import "@nutui/nutui-taro/dist/styles/variables.scss";`
   },
+  cache: {
+    enable: true
+  },
   mini: {
     webpackChain(chain) {
       chain.plugin('unplugin-vue-components').use(Components({

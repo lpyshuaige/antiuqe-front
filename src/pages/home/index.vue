@@ -12,7 +12,8 @@
             <view class="tip-list">
               <view class="tip-item">请尽可能多的拍摄物品的不同角度（整体器形、底部、口沿、器内、微观特征）</view>
               <view class="tip-item">确保光线充足，画面清晰，背景简洁，突出主体</view>
-              <view class="tip-item">鉴定结果请到<text class="link-text" @tap="goToHistory">鉴定记录</text>中查看</view>
+              <view class="tip-item">鉴定结果请到<text class="link-text" @tap="goToHistory">我的-鉴定记录</text>中查看</view>
+              <view class="tip-item">首次鉴定免费，未付费的报告半小时后会自动删除</view>
             </view>
           </view>
           
@@ -22,10 +23,6 @@
               <view class="upload-grid">
                 <!-- 整体器形-正面 -->
                 <view class="upload-item">
-                  <view class="upload-item-title">
-                    <text class="required">*</text>
-                    整体正面
-                  </view>
                   <view class="image-container">
                     <view v-if="imageMap.front" class="image-preview">
                       <image :src="imageMap.front.url" mode="aspectFill" class="preview-image" />
@@ -37,14 +34,14 @@
                       <view class="upload-hint">点击上传</view>
                     </view>
                   </view>
+                  <view class="upload-item-title">
+                    <text class="required">*</text>
+                    整体正面
+                  </view>
                 </view>
 
                 <!-- 整体器形-反面 -->
                 <view class="upload-item">
-                  <view class="upload-item-title">
-                    <text class="required">*</text>
-                    整体反面
-                  </view>
                   <view class="image-container">
                     <view v-if="imageMap.back" class="image-preview">
                       <image :src="imageMap.back.url" mode="aspectFill" class="preview-image" />
@@ -56,14 +53,14 @@
                       <view class="upload-hint">点击上传</view>
                     </view>
                   </view>
+                  <view class="upload-item-title">
+                    <text class="required">*</text>
+                    整体反面
+                  </view>
                 </view>
 
                 <!-- 底部 -->
                 <view class="upload-item">
-                  <view class="upload-item-title">
-                    <text class="required">*</text>
-                    底部
-                  </view>
                   <view class="image-container">
                     <view v-if="imageMap.bottom" class="image-preview">
                       <image :src="imageMap.bottom.url" mode="aspectFill" class="preview-image" />
@@ -75,14 +72,14 @@
                       <view class="upload-hint">点击上传</view>
                     </view>
                   </view>
+                  <view class="upload-item-title">
+                    <text class="required">*</text>
+                    底部
+                  </view>
                 </view>
 
                 <!-- 口沿 -->
                 <view class="upload-item">
-                  <view class="upload-item-title">
-                    <text class="required">*</text>
-                    口沿
-                  </view>
                   <view class="image-container">
                     <view v-if="imageMap.rim" class="image-preview">
                       <image :src="imageMap.rim.url" mode="aspectFill" class="preview-image" />
@@ -94,14 +91,14 @@
                       <view class="upload-hint">点击上传</view>
                     </view>
                   </view>
+                  <view class="upload-item-title">
+                    <text class="required">*</text>
+                    口沿
+                  </view>
                 </view>
 
                 <!-- 器内 -->
                 <view class="upload-item">
-                  <view class="upload-item-title">
-                    <text class="required">*</text>
-                    器内
-                  </view>
                   <view class="image-container">
                     <view v-if="imageMap.inside" class="image-preview">
                       <image :src="imageMap.inside.url" mode="aspectFill" class="preview-image" />
@@ -113,13 +110,14 @@
                       <view class="upload-hint">点击上传</view>
                     </view>
                   </view>
+                  <view class="upload-item-title">
+                    <text class="required">*</text>
+                    器内
+                  </view>
                 </view>
 
                 <!-- 微观特征 -->
                 <view class="upload-item">
-                  <view class="upload-item-title">
-                    微观特征
-                  </view>
                   <view class="image-container">
                     <view v-if="imageMap.micro" class="image-preview">
                       <image :src="imageMap.micro.url" mode="aspectFill" class="preview-image" />
@@ -131,13 +129,16 @@
                       <view class="upload-hint">点击上传</view>
                     </view>
                   </view>
+                  <view class="upload-item-title">
+                    微观特征
+                  </view>
                 </view>
               </view>
             </view>
           </view>
 
           <view class="button-block">
-            <nut-button type="primary" class="analyze-btn" @tap="startAnalyze" :loading="isLoading">
+            <nut-button type="primary" class="analyze-btn" @tap="startAnalyze" :loading="isLoading" :disabled="isLoading">
               开始分析
             </nut-button>
           </view>
@@ -146,12 +147,12 @@
     </view>
 
     <LoginPopup 
-      :show="showLoginPopup" 
+      v-model:show="showLoginPopup"
       @login="handleLoginResponse" 
       @close="handleLoginClose">
     </LoginPopup>
-    <AuthPopup 
-      :show="showAuthPopup" 
+    <AuthPopup
+      v-model:show="showAuthPopup"
       @confirm="handleAuthConfirm" 
       @close="handleAuthClose">
     </AuthPopup>
@@ -165,6 +166,7 @@ import LoginPopup from '../../components/LoginPopup.vue'
 import AuthPopup from '../../components/AuthPopup.vue'
 import { IconFont } from "@nutui/icons-vue-taro"
 import BASE_URL from "../../utils/request";
+import log from "../../utils/log";
 
 // 图片映射对象
 const imageMap = ref({
@@ -245,6 +247,7 @@ const handleUpload = (type: string) => {
         })
       } catch (error) {
         console.error('图片预加载失败', error)
+        log.error('图片预加载失败', error)
       }
     }
   })
@@ -348,10 +351,12 @@ const startAnalyzeProcess = async () => {
       })
       imageMap.value = {}
     }else{
+      log.error('上传失败', res.data.msg)
       throw new Error(`请求失败，状态码：${res.data.msg}`)
     }
   } catch (err) {
     console.error('操作失败', err)
+    log.error('操作失败', err)
     Taro.showToast({
       title: '系统错误',
       icon: 'error'
@@ -404,6 +409,7 @@ const goToHistory = () => {
     url: '/pages/history/index'
   }).catch(err => {
     console.error('跳转鉴定记录页面失败', err)
+    log.error('跳转鉴定记录页面失败', err)
     Taro.showToast({
       title: '跳转失败',
       icon: 'none'
@@ -492,7 +498,7 @@ useShareAppMessage(() => {
       border: 1px solid rgba(18, 150, 219, 0.1);
 
       .tip-item {
-        font-size: 14px;
+        font-size: 15px;
         color: #666;
         line-height: 1.6;
         margin-bottom: 16px;
@@ -510,8 +516,9 @@ useShareAppMessage(() => {
         }
 
         .link-text {
-          color: #1296db;
+          color: #ec350c;
           text-decoration: none;
+          font-weight: bold;
           
           &:active {
             opacity: 0.8;
@@ -534,7 +541,8 @@ useShareAppMessage(() => {
         .upload-item-title {
           font-size: 14px;
           color: #333;
-          margin-bottom: 8px;
+          margin-bottom: 12px;
+          margin-top: 4px;
           display: flex;
           align-items: center;
           justify-content: center;

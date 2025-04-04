@@ -1,6 +1,6 @@
 <template>
   <nut-popup 
-    :visible="show" 
+    v-model:visible="isVisible"
     position="bottom" 
     :style="{ borderRadius: '12px 12px 0 0' }"
     :overlay-style="{ background: 'rgba(0, 0, 0, 0.7)' }"
@@ -18,7 +18,7 @@
         <view class="subtitle">仅作个人资料展示</view>
         
         <view class="avatar-section">
-          <button class="avatar-wrapper" open-type="chooseAvatar" @chooseavatar="onChooseAvatar">
+          <button class="avatar-wrapper" open-type="chooseAvatar" @chooseavatar="onChooseAvatar"  >
             <nut-avatar 
               class="avatar" 
               size="large"
@@ -35,7 +35,7 @@
             class="nickname-input" 
             :value="nickname" 
             @change="onNickNameChange"
-            placeholder="请输入昵称" 
+            placeholder="请输入昵称,不要带入表情"
           />
         </view>
         
@@ -66,7 +66,8 @@
             class="btn-confirm" 
             block
             color="#07c160"
-            :disabled="!isValid"
+            :disabled="isLoading"
+            :loading="isLoading"
             @click="handleConfirm"
           >
             允许
@@ -78,10 +79,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import {ref, computed, watch} from 'vue'
 import Taro from '@tarojs/taro'
 import { IconFont } from "@nutui/icons-vue-taro"
 import BASE_URL from "../utils/request";
+import log from "../utils/log";
 
 
 const props = defineProps({
@@ -90,16 +92,18 @@ const props = defineProps({
     default: false
   }
 })
+const isVisible = ref(false)
+watch(() => props.show, (newValue) => {
+  isVisible.value = newValue
+})
 
 const emit = defineEmits(['update:show', 'confirm', 'close'])
 
 const avatarUrl = ref('')
 const nickname = ref('')
 const agreedToTerms = ref(false)
+const isLoading = ref(false)
 
-const isValid = computed(() => {
-  return avatarUrl.value && nickname.value && agreedToTerms.value
-})
 
 const onChooseAvatar = (e) => {
   const { avatarUrl: newAvatarUrl } = e.detail
@@ -164,11 +168,13 @@ const openUserAgreement = () => {
 }
 
 const handleConfirm = async () => {
+  isLoading.value = true
   if (!agreedToTerms.value) {
     Taro.showToast({
       title: '请先阅读并同意协议',
       icon: 'none'
     })
+    isLoading.value = false
     return
   }
   
@@ -177,6 +183,7 @@ const handleConfirm = async () => {
       title: '请完善头像和昵称',
       icon: 'none'
     })
+    isLoading.value = false
     return
   }
 
@@ -226,14 +233,18 @@ const handleConfirm = async () => {
       // 通知父组件授权成功
       emit('confirm', userInfo)
     } else {
+      log.error('上传失败：', res)
       throw new Error(`请求失败，状态码：${res.statusCode}`)
     }
+    isLoading.value = false
   } catch (error) {
     console.error('授权详细错误：', error)
+    log.error('授权失败',error)
     Taro.showToast({
       title: '授权失败，请重试',
       icon: 'error'
     })
+    isLoading.value = false
   }
 }
 

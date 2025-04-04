@@ -50,7 +50,7 @@
     </view>
 
     <LoginPopup 
-      :show="showLoginPopup" 
+      v-model:show="showLoginPopup"
       @login="handleLoginResponse" 
       @close="handleLoginClose"
     />
@@ -69,6 +69,7 @@ import { IconFont } from "@nutui/icons-vue"
 import LoginPopup from '../../components/LoginPopup.vue'
 import AuthPopup from '../../components/AuthPopup.vue'
 import BASE_URL from "../../utils/request";
+import log from "../../utils/log";
 
 const userInfo = ref(null)
 const showLoginPopup = ref(false)
@@ -118,7 +119,7 @@ const handleAuthClose = () => {
 }
 
 // 在组件挂载时检查是否有用户信息
-onMounted(() => {
+useDidShow(() => {
   console.log('检查是否有用户信息')
   try {
     const profile = Taro.getStorageSync('userInfo')
@@ -127,6 +128,7 @@ onMounted(() => {
       userInfo.value = profile
     }
   } catch (err) {
+    log.error('检查用户信息失败', err)
     console.error('获取存储的用户信息失败', err)
   }
 })

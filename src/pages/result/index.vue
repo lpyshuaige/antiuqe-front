@@ -103,7 +103,7 @@
             <view class="option-content">
               <view class="option-title">单次鉴定</view>
               <view class="option-desc">仅查看本次完整报告</view>
-              <view class="option-price">8元/次</view>
+              <view class="option-price">6元/次</view>
             </view>
             <view class="option-check">
               <CheckChecked 

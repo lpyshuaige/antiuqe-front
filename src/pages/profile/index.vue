@@ -29,11 +29,11 @@
         <nut-cell title="鉴定记录" is-link @click="handleHistory">
           <template #icon><IconFont name="clock" size="16"></IconFont></template>
         </nut-cell>
-        <nut-cell title="联系作者" is-link @click="handleService">
+        <nut-cell title="联系客服" is-link @click="handleService">
           <template #icon><IconFont name="service" size="16"></IconFont></template>
         </nut-cell>
-        <nut-cell title="关于作者" is-link @click="handleAbout">
-          <template #icon><IconFont name="issue" size="16"></IconFont></template>
+        <nut-cell title="设置" is-link @click="handleAbout">
+          <template #icon><IconFont name="setting" size="16"></IconFont></template>
         </nut-cell>
       </nut-cell-group>
 
@@ -50,7 +50,7 @@
     </view>
 
     <LoginPopup 
-      :show="showLoginPopup" 
+      v-model:show="showLoginPopup"
       @login="handleLoginResponse" 
       @close="handleLoginClose"
     />
@@ -63,12 +63,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import {ref} from 'vue'
 import Taro, {useDidShow} from '@tarojs/taro'
 import { IconFont } from "@nutui/icons-vue"
 import LoginPopup from '../../components/LoginPopup.vue'
 import AuthPopup from '../../components/AuthPopup.vue'
 import BASE_URL from "../../utils/request";
+import log from "../../utils/log";
 
 const userInfo = ref(null)
 const showLoginPopup = ref(false)
@@ -85,10 +86,8 @@ const handleLoginResponse = (data) => {
   // 检查授权状态
   if (!data || !data.nickname || !data.avatarUrl) {
     // 未授权，显示授权弹窗
-    console.log('未授权，显示授权弹窗')
     showAuthPopup.value = true
   }else {
-    console.log('已授权')
     userInfo.value = data
     Taro.showToast({
       title: '登录成功',
@@ -119,15 +118,13 @@ const handleAuthClose = () => {
 
 // 在组件挂载时检查是否有用户信息
 useDidShow(() => {
-  console.log('检查是否有用户信息')
   try {
     const profile = Taro.getStorageSync('userInfo')
     if (profile) {
-      console.log('已获取用户信息', profile)
       userInfo.value = profile
     }
   } catch (err) {
-    console.error('获取存储的用户信息失败', err)
+    log.error('检查用户信息失败', err)
   }
 })
 
@@ -160,18 +157,16 @@ const handleHistory = () => {
 }
 
 const handleService = () => {
-  // 打开客服会话
-  Taro.showToast({
-    title: '暂未开放',
-    icon: 'none'
+  // 跳转到联系作者页面
+  Taro.navigateTo({
+    url: '/pages/contact/index'
   })
 }
 
 const handleAbout = () => {
-  // 跳转到关于我们页面
-  Taro.showToast({
-    title: '暂未开放',
-    icon: 'none'
+  // 跳转到设置页面
+  Taro.navigateTo({
+    url: '/pages/settings/index'
   })
 }
 
@@ -197,18 +192,13 @@ const handleLogout = async () => {
         })
         if (res.statusCode === 200){
           if (res.data.code !== 200){
+            log.error('退出登录失败:', res.data.msg)
             throw new Error(res.data.msg || '退出登录失败')
           }
           userInfo.value = null
           Taro.removeStorageSync('userInfo')
           Taro.removeStorageSync('token')
-          console.log('用户已退出登录')
         }
-
-        // 立即关闭所有页面，打开个人中心页面
-        // Taro.reLaunch({
-        //   url: '/pages/profile/index'
-        // })
       }
     }
   })

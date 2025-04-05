@@ -1,5 +1,5 @@
 <template>
-  <nut-popup :visible="show" position="bottom" :style="{ borderRadius: '16px 16px 0 0' }">
+  <nut-popup v-model:visible="isVisible" @update:visible="onVisibleChange"  position="bottom" :style="{ borderRadius: '16px 16px 0 0',display: 'block !important'}">
     <view class="login-popup">
       <view class="popup-header">
         <view class="close-icon" @click="handleClose">
@@ -17,9 +17,11 @@
 </template>
 
 <script setup lang="ts">
-import Taro from '@tarojs/taro'
+import Taro, {useDidShow} from '@tarojs/taro'
 import { IconFont } from "@nutui/icons-vue-taro"
 import BASE_URL from "../utils/request";
+import {ref, watch} from "vue";
+import log from "../utils/log";
 
 const props = defineProps({
   show: {
@@ -30,10 +32,22 @@ const props = defineProps({
 
 const emit = defineEmits(['update:show', 'login', 'close'])
 
+const isVisible = ref(false)
+watch(() => props.show, (newValue) => {
+  isVisible.value = newValue
+})
+// 处理visible变化
+const onVisibleChange = (value) => {
+  isVisible.value = value
+  if (!value) {
+    emit('update:show', false)
+    emit('close')
+  }
+}
+
 // 登录请求函数
 const loginRequest = async (code: string) => {
   try {
-    console.log('发送登录请求...')
     const response = await Taro.request({
       url: `${BASE_URL}/user/login`,
       method: 'GET',
@@ -41,10 +55,9 @@ const loginRequest = async (code: string) => {
         'code': code
       }
     })
-    console.log('登录请求成功：', response)
     return response
   } catch (error) {
-    console.error('登录请求失败：', error)
+    log.error('登录请求失败：', error)
     throw error
   }
 }
@@ -53,8 +66,6 @@ const handleLogin = async () => {
   try {
     const loginRes = await Taro.login()
     if (loginRes.code) {
-      console.log('微信登录成功，code:', loginRes.code)
-      
       // 调用后端登录接口
       const res = await loginRequest(loginRes.code)
       
@@ -64,13 +75,13 @@ const handleLogin = async () => {
       const userInfo = Taro.getStorageSync('userInfo')
       // 通知父组件登录成功，并传递是否已授权的状态
       emit('login',userInfo)
-      
+      isVisible.value = false
       // 关闭登录弹窗
       emit('update:show', false)
       emit('close')
     }
   } catch (err) {
-    console.error('登录失败', err)
+    log.error('登录失败', err)
     Taro.showToast({
       title: '登录失败',
       icon: 'error',
@@ -80,6 +91,7 @@ const handleLogin = async () => {
 }
 
 const handleClose = () => {
+  isVisible.value = false
   emit('close')
 }
 </script>

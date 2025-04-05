@@ -80,12 +80,13 @@
 import { ref, computed, onMounted } from 'vue'
 import Taro, {useDidShow} from '@tarojs/taro'
 import BASE_URL from "../../../utils/request";
+import log from "../../../utils/log";
 
 
 // 订单列表
 const orderPoList = ref([])
 const currentPage = ref(1)
-const pageSize = ref(10)
+const pageSize = ref(5)
 const loading = ref(false)
 const totalItems = ref(0)
 
@@ -105,7 +106,6 @@ const fetchOrders = async (page = 1) => {
   if (totalPages.value > 0 && page > totalPages.value) page = totalPages.value
   
   loading.value = true
-  console.log('获取订单列表，页码，每页记录数：', page, pageSize.value)
   
   try {
     const token = Taro.getStorageSync('token')
@@ -127,18 +127,14 @@ const fetchOrders = async (page = 1) => {
         'sessionId': token
       }
     })
-    
-    console.log('订单列表响应：', res)
-    
     if (res.statusCode === 200 && res.data.code === 200) {
       // 设置总记录数和订单列表
       const { total, orderPoList: orders } = res.data.data
       totalItems.value = total || 0
       orderPoList.value = orders || []
       currentPage.value = page
-      
-      console.log('当前页码:', page, '每页条数:', pageSize.value, '总记录数:', totalItems.value, '总页数:', totalPages.value)
     } else {
+      log.error('获取订单列表失败', res.data.msg)
       Taro.showToast({
         title: res.data.msg || '获取订单失败',
         icon: 'none'
@@ -148,7 +144,7 @@ const fetchOrders = async (page = 1) => {
     }
     return Promise.resolve()
   } catch (error) {
-    console.error('获取订单列表失败', error)
+    log.error('获取订单列表失败', error)
     Taro.showToast({
       title: '网络错误',
       icon: 'none'
@@ -204,7 +200,7 @@ const formatTime = (timestamp) => {
   }
   
   if (!date || isNaN(date.getTime())) {
-    console.error('无效的日期格式:', timestamp)
+    log.error('无效的日期格式:', timestamp)
     return ''
   }
   
@@ -252,9 +248,6 @@ const handleCancel = (order) => {
               'sessionId': token
             }
           })
-
-          console.log('取消订单响应：', response)
-
           if (response.statusCode === 200 && response.data.code === 200) {
             Taro.showToast({
               title: '订单已取消',
@@ -263,13 +256,14 @@ const handleCancel = (order) => {
             // 刷新订单列表
             await fetchOrders(currentPage.value)
           } else {
+            log.error('取消订单失败', response.data.msg)
             Taro.showToast({
               title: response.data.msg || '取消订单失败',
               icon: 'none'
             })
           }
         } catch (error) {
-          console.error('取消订单失败:', error)
+          log.error('取消订单失败:', error)
           Taro.showToast({
             title: '网络错误',
             icon: 'none'
@@ -283,22 +277,18 @@ const handleCancel = (order) => {
 // 页面切换
 const onPageChange = (page) => {
   if (page < 1 || (totalPages.value > 0 && page > totalPages.value)) return
-  console.log('页面切换到：', page)
   fetchOrders(page)
 }
 
 // 页面加载时获取订单列表
 onMounted(() => {
-  console.log('订单列表页面初次加载')
   fetchOrders(1).then(() => {
-    console.log('订单列表初次加载完成')
     initialLoad.value = false
   })
 })
 
 useDidShow(() => {
   if (!initialLoad.value){
-    console.log('回到订单列表页面，刷新', currentPage.value)
     fetchOrders(currentPage.value)
   }
 

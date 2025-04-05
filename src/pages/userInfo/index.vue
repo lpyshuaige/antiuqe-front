@@ -43,6 +43,7 @@
 import { ref, onMounted } from 'vue'
 import Taro from '@tarojs/taro'
 import BASE_URL from "../../utils/request";
+import log from "../../utils/log";
 
 const userInfo = ref({
   avatarUrl: '',
@@ -70,7 +71,6 @@ const handleConfirm = async () => {
       nickname: userInfo.value.nickname,
       token: Taro.getStorageSync('token')
     })
-
     // 直接调用上传接口
     const res = await Taro.uploadFile({
       url: `${BASE_URL}/user/userAuth`,
@@ -83,19 +83,13 @@ const handleConfirm = async () => {
         'sessionId': Taro.getStorageSync('token')
       }
     })
-
-    console.log('上传响应：', res)
-
     if (res.statusCode === 200) {
       const responseData = JSON.parse(res.data)
       if (responseData.code !== 200) {
         throw new Error(responseData.msg || '服务器返回错误')
       }
-      console.log('修改信息成功：', responseData)
-
       // 获取原有的用户信息
       const existingUserInfo = Taro.getStorageSync('userInfo') || {}
-
       // 更新本地存储的用户信息，保留原有字段
       const newUserInfo = {
         ...existingUserInfo,
@@ -103,33 +97,32 @@ const handleConfirm = async () => {
         nickname: responseData.data.nickname
       }
       Taro.setStorageSync('userInfo', newUserInfo)
-      console.log('更新用户信息成功：', newUserInfo)
       Taro.showToast({
         title: '修改成功',
         icon: 'success'
       })
+      // 返回上一页
+      setTimeout(() => {
+        const pages = Taro.getCurrentPages()
+        if (pages.length > 1) {
+          Taro.navigateBack()
+        } else {
+          Taro.switchTab({
+            url: '/pages/profile/index'
+          })
+        }
+      }, 1500)
     } else {
+      log.error('修改失败,',res.errMsg)
       throw new Error(`请求失败，状态码：${res.statusCode}`)
     }
   } catch (error) {
-    console.error('修改详细错误：', error)
+    log.error('修改失败，请重试', error)
     Taro.showToast({
-      title: '修改失败，请重试',
+      title: '请传头像和昵称',
       icon: 'error'
     })
   }
-
-  // 返回上一页
-  setTimeout(() => {
-    const pages = Taro.getCurrentPages()
-    if (pages.length > 1) {
-      Taro.navigateBack()
-    } else {
-      Taro.switchTab({
-        url: '/pages/profile/index'
-      })
-    }
-  }, 1500)
 }
 
 onMounted(() => {
@@ -145,7 +138,7 @@ onMounted(() => {
       userInfo.value = profile
     }
   } catch (err) {
-    console.error('获取用户信息失败', err)
+    log.error('获取用户信息失败', err)
   }
 })
 </script>

@@ -1,6 +1,6 @@
 <template>
   <nut-popup 
-    :visible="show" 
+    v-model:visible="isVisible"
     position="bottom" 
     :style="{ borderRadius: '12px 12px 0 0' }"
     :overlay-style="{ background: 'rgba(0, 0, 0, 0.7)' }"
@@ -18,7 +18,7 @@
         <view class="subtitle">仅作个人资料展示</view>
         
         <view class="avatar-section">
-          <button class="avatar-wrapper" open-type="chooseAvatar" @chooseavatar="onChooseAvatar">
+          <button class="avatar-wrapper" open-type="chooseAvatar" @chooseavatar="onChooseAvatar"  >
             <nut-avatar 
               class="avatar" 
               size="large"
@@ -33,10 +33,23 @@
           <input 
             type="nickname" 
             class="nickname-input" 
-            :value="nickName" 
+            :value="nickname" 
             @change="onNickNameChange"
-            placeholder="请输入昵称" 
+            placeholder="请输入昵称,不要带入表情"
           />
+        </view>
+        
+        <!-- 隐私协议勾选区域 -->
+        <view class="agreement-section">
+          <view class="agreement-container">
+            <nut-checkbox v-model="agreedToTerms" icon-size="14" class="checkbox" />
+            <view class="agreement-text-container">
+              <text class="agreement-text">我已阅读并同意</text>
+              <text class="agreement-link" @tap.stop="openPrivacyContract">《隐私协议》</text>
+              <text class="agreement-text">和</text>
+              <text class="agreement-link" @tap.stop="openUserAgreement">《用户注册与服务协议》</text>
+            </view>
+          </view>
         </view>
 
         <view class="button-group">
@@ -53,7 +66,8 @@
             class="btn-confirm" 
             block
             color="#07c160"
-            :disabled="!isValid"
+            :disabled="isLoading"
+            :loading="isLoading"
             @click="handleConfirm"
           >
             允许
@@ -65,9 +79,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import {ref, computed, watch} from 'vue'
 import Taro from '@tarojs/taro'
 import { IconFont } from "@nutui/icons-vue-taro"
+import BASE_URL from "../utils/request";
+import log from "../utils/log";
 
 
 const props = defineProps({
@@ -76,15 +92,18 @@ const props = defineProps({
     default: false
   }
 })
+const isVisible = ref(false)
+watch(() => props.show, (newValue) => {
+  isVisible.value = newValue
+})
 
 const emit = defineEmits(['update:show', 'confirm', 'close'])
 
 const avatarUrl = ref('')
-const nickName = ref('')
+const nickname = ref('')
+const agreedToTerms = ref(false)
+const isLoading = ref(false)
 
-const isValid = computed(() => {
-  return avatarUrl.value && nickName.value
-})
 
 const onChooseAvatar = (e) => {
   const { avatarUrl: newAvatarUrl } = e.detail
@@ -94,25 +113,124 @@ const onChooseAvatar = (e) => {
 
 const onNickNameChange = (e) => {
   const { value: newNickName } = e.detail
-  nickName.value = newNickName
+  nickname.value = newNickName
 }
 
-const handleConfirm = () => {
-  if (!isValid.value) {
+// 打开隐私协议
+const openPrivacyContract = () => {
+  try {
+    console.log('打开隐私协议')
+    Taro.openPrivacyContract({
+      success: () => {
+        console.log('打开隐私协议成功')
+      },
+      fail: (err) => {
+        log.error('打开隐私协议失败', err)
+        // 如果微信API调用失败，尝试跳转到自定义页面
+        Taro.navigateTo({
+          url: '/pages/privacy/index'
+        }).catch(e => {
+          log.error('跳转隐私协议页面失败', e)
+          Taro.showToast({
+            title: '打开隐私协议失败',
+            icon: 'none'
+          })
+        })
+      }
+    })
+  } catch (error) {
+    log.error('调用隐私协议API失败', error)
+    // 降级处理：尝试跳转到自定义页面
+    Taro.navigateTo({
+      url: '/pages/privacy/index'
+    }).catch(e => {
+      log.error('跳转隐私协议页面失败', e)
+      Taro.showToast({
+        title: '打开隐私协议失败',
+        icon: 'none'
+      })
+    })
+  }
+}
+
+// 打开用户协议
+const openUserAgreement = () => {
+  Taro.navigateTo({
+    url: '/pages/agreement/index'
+  }).catch(err => {
+    log.error('打开用户协议失败', err)
+    Taro.showToast({
+      title: '打开用户协议失败',
+      icon: 'none'
+    })
+  })
+}
+
+const handleConfirm = async () => {
+  isLoading.value = true
+  if (!agreedToTerms.value) {
+    Taro.showToast({
+      title: '请先阅读并同意协议',
+      icon: 'none'
+    })
+    isLoading.value = false
+    return
+  }
+  
+  if (!avatarUrl.value || !nickname.value) {
     Taro.showToast({
       title: '请完善头像和昵称',
       icon: 'none'
     })
+    isLoading.value = false
     return
   }
 
-  const userInfo = {
-    avatarUrl: avatarUrl.value,
-    nickName: nickName.value
+  try {
+    // 直接调用上传接口
+    const res = await Taro.uploadFile({
+      url: `${BASE_URL}/user/userAuth`,
+      filePath: avatarUrl.value,
+      name: 'avatar',
+      formData: {
+        'nickname': nickname.value
+      },
+      header: {
+        'sessionId': Taro.getStorageSync('token')
+      }
+    })
+    if (res.statusCode === 200) {
+      const responseData = JSON.parse(res.data)
+      if (responseData.code !== 200) {
+        log.error('授权失败：', responseData.msg)
+        throw new Error(responseData.msg || '服务器返回错误')
+      }
+
+      // 获取原有的用户信息
+      const existingUserInfo = Taro.getStorageSync('userInfo') || {}
+      
+      // 更新本地存储的用户信息，保留原有字段
+      const userInfo = {
+        ...existingUserInfo,
+        avatarUrl: responseData.data.avatarUrl,
+        nickname: responseData.data.nickname
+      }
+      Taro.setStorageSync('userInfo', userInfo)
+      // 通知父组件授权成功
+      emit('confirm', userInfo)
+    } else {
+      log.error('上传失败：', res)
+      throw new Error(`请求失败，状态码：${res.statusCode}`)
+    }
+    isLoading.value = false
+  } catch (error) {
+    log.error('授权失败',error)
+    Taro.showToast({
+      title: '授权失败，请重试',
+      icon: 'error'
+    })
+    isLoading.value = false
   }
-  
-  console.log('用户信息更新：', userInfo)
-  emit('confirm', userInfo)
 }
 
 const handleClose = () => {
@@ -238,6 +356,40 @@ const handleClose = () => {
         &::placeholder {
           color: #999;
         }
+      }
+    }
+
+    /* 协议勾选样式 */
+    .agreement-section {
+      margin-top: 16px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 12px;
+      color: #666;
+      line-height: 20px;
+      
+      .agreement-container {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      
+      .checkbox {
+        margin-right: 5px;
+      }
+      
+      .agreement-text-container {
+        display: flex;
+        align-items: center;
+      }
+      
+      .agreement-text {
+        color: #666;
+      }
+      
+      .agreement-link {
+        color: #07c160;
       }
     }
 

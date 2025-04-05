@@ -1,9 +1,15 @@
-export default {
+export default defineAppConfig({
   pages: [
     'pages/home/index',
     'pages/profile/index',
     'pages/result/index',
-    'pages/userInfo/index'
+    'pages/history/index',
+    'pages/order/detail/index',
+    'pages/order/list/index',
+    'pages/userInfo/index',
+    'pages/agreement/index',
+    'pages/contact/index',
+    'pages/settings/index'
   ],
   window: {
     backgroundTextStyle: 'light',
@@ -30,5 +36,6 @@ export default {
         selectedIconPath: './assets/tabbar/my-active.png'
       }
     ]
-  }
-}
+  },
+  lazyCodeLoading: 'requiredComponents'
+})

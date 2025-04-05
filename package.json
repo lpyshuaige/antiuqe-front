@@ -11,6 +11,7 @@
   },
   "scripts": {
     "build:weapp": "taro build --type weapp",
+    "build:wxapp": "taro build --type weapp --watch --env production",
     "build:swan": "taro build --type swan",
     "build:alipay": "taro build --type alipay",
     "build:tt": "taro build --type tt",
@@ -54,6 +55,7 @@
     "@tarojs/runtime": "3.6.25",
     "@tarojs/shared": "3.6.25",
     "@tarojs/taro": "3.6.25",
+    "axios": "^0.27.2",
     "axios-taro-adapter": "^0.0.3",
     "vue": "^3.2.40"
   },

@@ -10,7 +10,11 @@
         <nut-avatar size="large" class="avatar">
           <img :src="userInfo.avatarUrl" class="avatar-img" />
         </nut-avatar>
-        <text class="nickname">{{ userInfo.nickName }}</text>
+        <view class="nickname-container">
+          <text class="nickname">{{ userInfo.nickname || '微信用户' }}</text>
+          <!-- 会员标识 -->
+          <view v-if="userInfo && userInfo.isMember" class="member-badge">会员</view>
+        </view>
         <view class="arrow-icon" @tap="goToUserInfo">
           <IconFont name="right" size="16" />
         </view>
@@ -25,11 +29,11 @@
         <nut-cell title="鉴定记录" is-link @click="handleHistory">
           <template #icon><IconFont name="clock" size="16"></IconFont></template>
         </nut-cell>
-        <nut-cell title="联系作者" is-link @click="handleService">
+        <nut-cell title="联系客服" is-link @click="handleService">
           <template #icon><IconFont name="service" size="16"></IconFont></template>
         </nut-cell>
-        <nut-cell title="关于作者" is-link @click="handleAbout">
-          <template #icon><IconFont name="issue" size="16"></IconFont></template>
+        <nut-cell title="设置" is-link @click="handleAbout">
+          <template #icon><IconFont name="setting" size="16"></IconFont></template>
         </nut-cell>
       </nut-cell-group>
 
@@ -46,7 +50,7 @@
     </view>
 
     <LoginPopup 
-      :show="showLoginPopup" 
+      v-model:show="showLoginPopup"
       @login="handleLoginResponse" 
       @close="handleLoginClose"
     />
@@ -59,11 +63,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import Taro from '@tarojs/taro'
+import {ref} from 'vue'
+import Taro, {useDidShow} from '@tarojs/taro'
 import { IconFont } from "@nutui/icons-vue"
 import LoginPopup from '../../components/LoginPopup.vue'
 import AuthPopup from '../../components/AuthPopup.vue'
+import BASE_URL from "../../utils/request";
+import log from "../../utils/log";
 
 const userInfo = ref(null)
 const showLoginPopup = ref(false)
@@ -75,13 +81,18 @@ const handleLogin = () => {
 }
 
 // 处理登录响应
-const handleLoginResponse = (isAuth: boolean) => {
+const handleLoginResponse = (data) => {
   showLoginPopup.value = false
   // 检查授权状态
-  const userInfo = Taro.getStorageSync('userInfo')
-  if (!userInfo || !userInfo.avatarUrl || !userInfo.nickName) {
+  if (!data || !data.nickname || !data.avatarUrl) {
     // 未授权，显示授权弹窗
     showAuthPopup.value = true
+  }else {
+    userInfo.value = data
+    Taro.showToast({
+      title: '登录成功',
+      icon: 'success'
+    })
   }
 }
 
@@ -94,9 +105,8 @@ const handleLoginClose = () => {
 const handleAuthConfirm = (info) => {
   showAuthPopup.value = false
   userInfo.value = info
-  Taro.setStorageSync('userInfo', info)
   Taro.showToast({
-    title: '登录成功',
+    title: '授权完成',
     icon: 'success'
   })
 }
@@ -107,14 +117,14 @@ const handleAuthClose = () => {
 }
 
 // 在组件挂载时检查是否有用户信息
-onMounted(() => {
+useDidShow(() => {
   try {
     const profile = Taro.getStorageSync('userInfo')
     if (profile) {
       userInfo.value = profile
     }
   } catch (err) {
-    console.error('获取存储的用户信息失败', err)
+    log.error('检查用户信息失败', err)
   }
 })
 
@@ -126,7 +136,10 @@ const handleOrder = () => {
     })
     return
   }
-  // 跳转到订单页面
+  // 跳转到订单列表页面
+  Taro.navigateTo({
+    url: '/pages/order/list/index'
+  })
 }
 
 const handleHistory = () => {
@@ -138,21 +151,22 @@ const handleHistory = () => {
     return
   }
   // 跳转到鉴定记录页面
+  Taro.navigateTo({
+    url: '/pages/history/index'
+  })
 }
 
 const handleService = () => {
-  // 打开客服会话
-  Taro.showToast({
-    title: '暂未开放',
-    icon: 'none'
+  // 跳转到联系作者页面
+  Taro.navigateTo({
+    url: '/pages/contact/index'
   })
 }
 
 const handleAbout = () => {
-  // 跳转到关于我们页面
-  Taro.showToast({
-    title: '暂未开放',
-    icon: 'none'
+  // 跳转到设置页面
+  Taro.navigateTo({
+    url: '/pages/settings/index'
   })
 }
 
@@ -162,21 +176,29 @@ const goToUserInfo = () => {
   })
 }
 
-const handleLogout = () => {
+const handleLogout = async () => {
   Taro.showModal({
     title: '提示',
     content: '确定要退出登录吗？',
-    success: function (res) {
+    success: async function (res) {
       if (res.confirm) {
         // 清除用户信息和token
-        Taro.removeStorageSync('userInfo')
-        Taro.removeStorageSync('token')
-        console.log('用户已退出登录')
-        
-        // 立即关闭所有页面，打开个人中心页面
-        Taro.reLaunch({
-          url: '/pages/profile/index'
+        const res = await Taro.request({
+          url: `${BASE_URL}/user/logout`,
+          method: 'GET',
+          header: {
+            'sessionId': Taro.getStorageSync('token')
+          }
         })
+        if (res.statusCode === 200){
+          if (res.data.code !== 200){
+            log.error('退出登录失败:', res.data.msg)
+            throw new Error(res.data.msg || '退出登录失败')
+          }
+          userInfo.value = null
+          Taro.removeStorageSync('userInfo')
+          Taro.removeStorageSync('token')
+        }
       }
     }
   })
@@ -226,11 +248,29 @@ const handleLogout = () => {
         }
       }
       
-      .nickname {
+      .nickname-container {
         flex: 1;
-        font-size: 16px;
-        color: #333;
-        font-weight: 600;
+        display: flex;
+        align-items: center;
+        
+        .nickname {
+          font-size: 16px;
+          color: #333;
+          font-weight: 600;
+          margin-right: 8px;
+        }
+        
+        .member-badge {
+          background-color: #FFD700;
+          color: #8B4513;
+          font-size: 12px;
+          font-weight: bold;
+          padding: 2px 6px;
+          border-radius: 10px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+        }
       }
 
       .arrow-icon {

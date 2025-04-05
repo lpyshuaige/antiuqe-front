@@ -1,5 +1,5 @@
 <template>
-  <nut-popup :visible="show" position="bottom" :style="{ borderRadius: '16px 16px 0 0' }">
+  <nut-popup v-model:visible="isVisible" @update:visible="onVisibleChange"  position="bottom" :style="{ borderRadius: '16px 16px 0 0',display: 'block !important'}">
     <view class="login-popup">
       <view class="popup-header">
         <view class="close-icon" @click="handleClose">
@@ -17,9 +17,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import Taro from '@tarojs/taro'
+import Taro, {useDidShow} from '@tarojs/taro'
 import { IconFont } from "@nutui/icons-vue-taro"
+import BASE_URL from "../utils/request";
+import {ref, watch} from "vue";
+import log from "../utils/log";
 
 const props = defineProps({
   show: {
@@ -30,32 +32,66 @@ const props = defineProps({
 
 const emit = defineEmits(['update:show', 'login', 'close'])
 
+const isVisible = ref(false)
+watch(() => props.show, (newValue) => {
+  isVisible.value = newValue
+})
+// 处理visible变化
+const onVisibleChange = (value) => {
+  isVisible.value = value
+  if (!value) {
+    emit('update:show', false)
+    emit('close')
+  }
+}
+
+// 登录请求函数
+const loginRequest = async (code: string) => {
+  try {
+    const response = await Taro.request({
+      url: `${BASE_URL}/user/login`,
+      method: 'GET',
+      header: {
+        'code': code
+      }
+    })
+    return response
+  } catch (error) {
+    log.error('登录请求失败：', error)
+    throw error
+  }
+}
+
 const handleLogin = async () => {
   try {
     const loginRes = await Taro.login()
     if (loginRes.code) {
-      console.log('登录成功，code:', loginRes.code)
-      // 这里应该调用后端接口获取token和isAuth
-      // 模拟后端返回数据
-      const mockResponse = {
-        token: 'mock_token',
-        isAuth: false
-      }
+      // 调用后端登录接口
+      const res = await loginRequest(loginRes.code)
+      
       // 存储token
-      Taro.setStorageSync('token', mockResponse.token)
+      Taro.setStorageSync('token', res.data.data.sessionId)
+      Taro.setStorageSync('userInfo', res.data.data)
+      const userInfo = Taro.getStorageSync('userInfo')
       // 通知父组件登录成功，并传递是否已授权的状态
-      emit('login', mockResponse.isAuth)
+      emit('login',userInfo)
+      isVisible.value = false
+      // 关闭登录弹窗
+      emit('update:show', false)
+      emit('close')
     }
   } catch (err) {
-    console.error('登录失败', err)
+    log.error('登录失败', err)
     Taro.showToast({
       title: '登录失败',
-      icon: 'error'
+      icon: 'error',
+      duration: 2000
     })
   }
 }
 
 const handleClose = () => {
+  isVisible.value = false
   emit('close')
 }
 </script>

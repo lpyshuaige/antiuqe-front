@@ -13,21 +13,7 @@
             <text class="value">19210091735</text>
             <view class="copy-btn" @tap="copyWechatId">复制</view>
           </view>
-          
-<!--          <view class="qr-code-section">-->
-<!--            <image -->
-<!--              class="qr-code" -->
-<!--              src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSzrlbeMxCcn1KnO6rJIx6X4vKkJMcQGk2xtygJE1iiCpQpByTgfQEJVm1lnPYEpJd6MNs" -->
-<!--              mode="aspectFit"-->
-<!--            />-->
-<!--            <text class="qr-tip">扫码添加客服微信</text>-->
-<!--          </view>-->
         </view>
-        
-<!--        <view class="service-time">-->
-<!--          <text class="time-label">服务时间：</text>-->
-<!--          <text class="time-value">周一至周五 9:00-18:00</text>-->
-<!--        </view>-->
       </view>
     </view>
   </view>

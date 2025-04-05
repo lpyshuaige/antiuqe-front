@@ -125,12 +125,12 @@ const openPrivacyContract = () => {
         console.log('打开隐私协议成功')
       },
       fail: (err) => {
-        console.error('打开隐私协议失败', err)
+        log.error('打开隐私协议失败', err)
         // 如果微信API调用失败，尝试跳转到自定义页面
         Taro.navigateTo({
           url: '/pages/privacy/index'
         }).catch(e => {
-          console.error('跳转隐私协议页面失败', e)
+          log.error('跳转隐私协议页面失败', e)
           Taro.showToast({
             title: '打开隐私协议失败',
             icon: 'none'
@@ -139,12 +139,12 @@ const openPrivacyContract = () => {
       }
     })
   } catch (error) {
-    console.error('调用隐私协议API失败', error)
+    log.error('调用隐私协议API失败', error)
     // 降级处理：尝试跳转到自定义页面
     Taro.navigateTo({
       url: '/pages/privacy/index'
     }).catch(e => {
-      console.error('跳转隐私协议页面失败', e)
+      log.error('跳转隐私协议页面失败', e)
       Taro.showToast({
         title: '打开隐私协议失败',
         icon: 'none'
@@ -155,11 +155,10 @@ const openPrivacyContract = () => {
 
 // 打开用户协议
 const openUserAgreement = () => {
-  console.log('打开用户协议')
   Taro.navigateTo({
     url: '/pages/agreement/index'
   }).catch(err => {
-    console.error('打开用户协议失败', err)
+    log.error('打开用户协议失败', err)
     Taro.showToast({
       title: '打开用户协议失败',
       icon: 'none'
@@ -188,12 +187,6 @@ const handleConfirm = async () => {
   }
 
   try {
-    console.log('开始上传文件，参数：', {
-      avatarUrl: avatarUrl.value,
-      nickname: nickname.value,
-      token: Taro.getStorageSync('token')
-    })
-
     // 直接调用上传接口
     const res = await Taro.uploadFile({
       url: `${BASE_URL}/user/userAuth`,
@@ -206,14 +199,10 @@ const handleConfirm = async () => {
         'sessionId': Taro.getStorageSync('token')
       }
     })
-
-    console.log('上传响应：', res)
-
     if (res.statusCode === 200) {
       const responseData = JSON.parse(res.data)
-      console.log('授权成功：', responseData)
-
       if (responseData.code !== 200) {
+        log.error('授权失败：', responseData.msg)
         throw new Error(responseData.msg || '服务器返回错误')
       }
 
@@ -226,10 +215,7 @@ const handleConfirm = async () => {
         avatarUrl: responseData.data.avatarUrl,
         nickname: responseData.data.nickname
       }
-      
       Taro.setStorageSync('userInfo', userInfo)
-      console.log('更新用户信息成功：', userInfo)
-      
       // 通知父组件授权成功
       emit('confirm', userInfo)
     } else {
@@ -238,7 +224,6 @@ const handleConfirm = async () => {
     }
     isLoading.value = false
   } catch (error) {
-    console.error('授权详细错误：', error)
     log.error('授权失败',error)
     Taro.showToast({
       title: '授权失败，请重试',

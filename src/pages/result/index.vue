@@ -140,6 +140,7 @@ import Taro, { useDidShow } from '@tarojs/taro'
 import { Close, CheckNormal, CheckChecked, RectDown } from '@nutui/icons-vue-taro'
 import BASE_URL from "../../utils/request";
 import towxml from '../../components/towxml/index';
+import log from "../../utils/log";
 
 // 页面参数
 const imageList = ref<string[]>([])
@@ -177,11 +178,10 @@ const parseMarkdown = (content) => {
       }
       mdContent = content.slice(0, cutoffIndex)
     }
-    console.log('处理后的Markdown内容:', mdContent)
     // 使用towxml解析markdown
     return towxml(mdContent, 'markdown')
   } catch (error) {
-    console.error('解析Markdown失败:', error)
+    log.error('解析Markdown失败:', error)
     return {}
   }
 }
@@ -237,7 +237,6 @@ onMounted(() => {
     title: '鉴定结果'
   })
   const params = Taro.getCurrentInstance().router?.params
-  console.log('页面参数:', params)
   if (params) {
     // 如果有ID参数，则通过ID获取鉴定记录详情
     if (params.id) {
@@ -256,7 +255,6 @@ useDidShow(() => {
   console.log('鉴定报告页面显示，检查是否需要刷新报告状态')
   // 如果有报告ID，重新获取报告详情以更新支付状态
   if (!isLoading.value && reportId.value) {
-    console.log('重新获取报告详情，ID:', reportId.value)
     fetchReportDetail(reportId.value)
   }
 })
@@ -275,9 +273,6 @@ const fetchReportDetail = async (id) => {
       })
       return
     }
-    
-    console.log('获取鉴定记录详情，ID：', id)
-    
     // 获取当前路由参数
     const params = Taro.getCurrentInstance().router?.params
     
@@ -286,9 +281,8 @@ const fetchReportDetail = async (id) => {
       try {
         const imageListData = JSON.parse(decodeURIComponent(params.imageList || '[]'))
         imageList.value = imageListData
-        console.log('从参数获取图片列表成功', imageList.value.length)
       } catch (error) {
-        console.error('解析图片列表参数失败', error)
+        log.error('解析图片列表参数失败', error)
       }
     }
     
@@ -300,14 +294,10 @@ const fetchReportDetail = async (id) => {
         'sessionId': token
       }
     })
-    
-    console.log('鉴定记录详情响应：', res)
-    
     if (res.statusCode === 200 && res.data.code === 200) {
       const { id, info, canShow } = res.data.data
       // 根据后端返回的canShow字段决定用户是否能查看完整报告
       canViewFullReport.value = canShow
-      console.log('用户是否可以查看完整报告:', canViewFullReport.value ? '是' : '否')
       // 设置报告内容 - 简化处理，直接使用info字符串
       if (info) {
         reportInfo.value = info
@@ -315,15 +305,15 @@ const fetchReportDetail = async (id) => {
         // 解析markdown内容
         markdownData.value = parseMarkdown(info)
       }
-
     } else {
+      log.error('获取鉴定记录详情失败', res.data.msg)
       Taro.showToast({
         title: res.data.msg || '获取详情失败',
         icon: 'none'
       })
     }
   } catch (error) {
-    console.error('获取鉴定记录详情失败', error)
+    log.error('获取鉴定记录详情失败', error)
     Taro.showToast({
       title: '网络错误',
       icon: 'none'
@@ -355,9 +345,6 @@ const handlePayment = async () => {
         url += `?reportId=${currentParams.id}`
       }
     }
-    
-    console.log('创建订单请求URL:', url)
-
     // 调用创建订单接口
     const res = await Taro.request({
       url: url,
@@ -380,13 +367,14 @@ const handlePayment = async () => {
         url: `/pages/order/detail/index?orderData=${queryString}`
       })
     } else {
+      log.error('创建订单失败', res.data.msg)
       Taro.showToast({
         title: res.data.msg || '创建订单失败',
         icon: 'none'
       })
     }
   } catch (error) {
-    console.error('创建订单失败', error)
+    log.error('创建订单失败', error)
     Taro.showToast({
       title: '网络错误',
       icon: 'none'

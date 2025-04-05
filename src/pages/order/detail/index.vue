@@ -98,7 +98,6 @@ const handleTimeEnd = () => {
     title: '订单已超时',
     icon: 'none'
   })
-  // 可以在这里添加自动返回等逻辑
 }
 
 // 取消按钮处理
@@ -125,9 +124,6 @@ const handleCancel = () => {
               'sessionId': token
             }
           })
-
-          console.log('取消订单响应：', response)
-
           if (response.statusCode === 200 && response.data.code === 200) {
             Taro.showToast({
               title: '订单已取消',
@@ -136,13 +132,14 @@ const handleCancel = () => {
             // 返回上一个页面
             Taro.navigateBack()
           } else {
+            log.error('取消订单失败:', response.data.msg)
             Taro.showToast({
               title: response.data.msg || '取消订单失败',
               icon: 'none'
             })
           }
         } catch (error) {
-          console.error('取消订单失败:', error)
+          log.error('取消订单失败:', error)
           Taro.showToast({
             title: '网络错误',
             icon: 'none'
@@ -165,7 +162,6 @@ const handlePay = async () => {
       })
       return
     }
-    console.log('订单详情：', orderData.value)
     // 调用后端接口获取支付参数
     const res = await Taro.request({
       url: `${BASE_URL}/myapp/transaction?orderId=${orderData.value.id}`,
@@ -177,7 +173,6 @@ const handlePay = async () => {
 
     if (res.statusCode === 200 && res.data.code === 200) {
       const payParams = res.data.data
-      console.log('支付参数:', payParams)
       // 调用微信支付
       try {
         await Taro.requestPayment({
@@ -187,10 +182,8 @@ const handlePay = async () => {
           signType: payParams.signType,
           paySign: payParams.paySign,
           success(res) {
-            console.log('支付成功:', res)
             //inform为true时表示开通会员，更新本地缓存的用户信息
             if (orderData.value.inform){
-              console.log('开通了会员，更新本地缓存用户信息')
               const userInfo = Taro.getStorageSync('userInfo')
               userInfo.isMember = true
               Taro.setStorageSync('userInfo', userInfo)
@@ -208,13 +201,12 @@ const handlePay = async () => {
           },
           fail(err) {
             if (err.errMsg === 'requestPayment:fail cancel') {
-              console.log('用户取消支付');
               Taro.showToast({
                 title: '支付已取消',
                 icon: 'none'
               })
             } else {
-              console.log('支付失败', err);
+              log.error('支付失败', err);
             }
           },
           complete(res) {
@@ -233,7 +225,7 @@ const handlePay = async () => {
           })
         } else {
           // 其他支付错误
-          console.error('支付失败:', payError)
+          log.error('支付失败:', payError)
           Taro.showToast({
             title: '支付失败',
             icon: 'none'
@@ -241,14 +233,13 @@ const handlePay = async () => {
         }
       }
     } else {
-      console.error('获取支付参数失败:', res.data.msg)
+      log.error('获取支付参数失败:', res.data.msg)
       Taro.showToast({
         title: res.data.msg || '获取支付参数失败',
         icon: 'none'
       })
     }
   } catch (error) {
-    console.error('请求支付接口失败:', error)
     log.error('请求支付接口失败:', error)
     Taro.showToast({
       title: '网络错误',
@@ -271,7 +262,7 @@ onMounted(() => {
       
       // 确保创建时间是有效的时间戳
       if (isNaN(createdTime)) {
-        console.error('无效的创建时间:', data.createdTime)
+        log.error('无效的创建时间:', data.createdTime)
         Taro.showToast({
           title: '订单数据错误',
           icon: 'none'
@@ -281,11 +272,6 @@ onMounted(() => {
 
       // 计算结束时间（创建时间 + 10分钟）
       const endTimeStamp = createdTime + 10 * 60 * 1000
-      
-      console.log('订单创建时间：', new Date(createdTime).toLocaleString())
-      console.log('当前时间：', new Date(now).toLocaleString())
-      console.log('结束时间：', new Date(endTimeStamp).toLocaleString())
-      
       if (now >= endTimeStamp) {
         // 如果已经超时
         handleTimeEnd()
@@ -294,7 +280,7 @@ onMounted(() => {
         endTime.value = endTimeStamp
       }
     } catch (error) {
-      console.error('解析订单数据失败', error)
+      log.error('解析订单数据失败', error)
       Taro.showToast({
         title: '订单数据错误',
         icon: 'none'

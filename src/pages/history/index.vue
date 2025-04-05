@@ -75,9 +75,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import {computed, onMounted, ref} from 'vue'
 import Taro from '@tarojs/taro'
 import BASE_URL from "../../utils/request";
+import log from "../../utils/log";
 
 
 // 记录列表
@@ -101,7 +102,6 @@ const fetchRecords = async (page = 1) => {
   if (totalPages.value > 0 && page > totalPages.value) page = totalPages.value
   
   loading.value = true
-  console.log('获取鉴定记录，页码，每页记录数：', page, pageSize.value)
   
   try {
     const token = Taro.getStorageSync('token')
@@ -123,26 +123,23 @@ const fetchRecords = async (page = 1) => {
         'sessionId': token
       }
     })
-    
-    console.log('鉴定记录响应：', res)
-    
     if (res.statusCode === 200 && res.data.code === 200) {
       // 设置总记录数和记录列表
       const { total, reportList } = res.data.data
       totalItems.value = total
-      
-      const records = reportList.map(item => {
+
+      recordList.value = reportList.map(item => {
         // 解析图片列表
         let imageList = []
         try {
-          imageList = typeof item.imageList === 'string' 
-            ? JSON.parse(item.imageList) 
-            : item.imageList
+          imageList = typeof item.imageList === 'string'
+              ? JSON.parse(item.imageList)
+              : item.imageList
         } catch (e) {
-          console.error('解析图片列表失败', e)
+          log.error('解析图片列表失败', e)
           imageList = []
         }
-        
+
         return {
           id: item.id,
           orderId: item.order_id,
@@ -154,12 +151,9 @@ const fetchRecords = async (page = 1) => {
           isFinished: !!item.finishedTime
         }
       })
-      
-      recordList.value = records
       currentPage.value = page
-      
-      console.log('当前页码:', page, '每页条数:', pageSize.value, '总记录数:', totalItems.value, '总页数:', totalPages.value)
     } else {
+      log.error('获取记录失败', res.data.msg)
       Taro.showToast({
         title: res.data.msg || '获取记录失败',
         icon: 'none'
@@ -167,7 +161,7 @@ const fetchRecords = async (page = 1) => {
     }
     return Promise.resolve()
   } catch (error) {
-    console.error('获取鉴定记录失败', error)
+    log.error('获取鉴定记录失败', error)
     Taro.showToast({
       title: '网络错误',
       icon: 'none'
@@ -224,7 +218,7 @@ const formatTime = (timestamp) => {
   
   // 检查日期是否有效
   if (!date || isNaN(date.getTime())) {
-    console.error('无效的日期格式:', timestamp)
+    log.error('无效的日期格式:', timestamp)
     return ''
   }
   
@@ -240,9 +234,6 @@ const formatTime = (timestamp) => {
 // 查看报告详情
 const viewReport = (record) => {
   if (!record.isFinished) return
-  
-  console.log('查看报告', record.id)
-  
   // 将完整的图片列表作为参数传递
   const params = {
     id: record.id,
@@ -251,15 +242,12 @@ const viewReport = (record) => {
   
   // 构建URL并导航到详情页
   const url = `/pages/result/index?id=${params.id}&imageList=${params.imageList}`
-  console.log('导航到报告详情页', url)
-  
   Taro.navigateTo({ url })
 }
 
 // 页面切换
 const onPageChange = (page) => {
   if (page < 1 || (totalPages.value > 0 && page > totalPages.value)) return
-  console.log('页面切换到：', page)
   fetchRecords(page)
 }
 
@@ -284,9 +272,7 @@ const handleDelete = (record) => {
             })
             return
           }
-
           loading.value = true
-          console.log('删除鉴定记录id：', record.id)
           // 调用删除接口
           const response = await Taro.request({
             url: `${BASE_URL}/report/deleteReport?id=${record.id}`,
@@ -295,9 +281,6 @@ const handleDelete = (record) => {
               'sessionId': token
             }
           })
-
-          console.log('删除鉴定记录响应：', response)
-
           if (response.statusCode === 200 && response.data.code === 200) {
             Taro.showToast({
               title: '删除成功',
@@ -307,13 +290,14 @@ const handleDelete = (record) => {
             // 刷新记录列表
             await fetchRecords(currentPage.value)
           } else {
+            log.error('删除记录失败', response.data.msg)
             Taro.showToast({
               title: response.data.msg || '删除失败',
               icon: 'none'
             })
           }
         } catch (error) {
-          console.error('删除记录失败:', error)
+          log.error('删除记录失败:', error)
           Taro.showToast({
             title: '网络错误',
             icon: 'none'

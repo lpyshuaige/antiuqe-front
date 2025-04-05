@@ -188,7 +188,7 @@ const showLoginPopup = ref(false)
 const showAuthPopup = ref(false)
 
 // 删除前的回调
-const onBeforeDelete = (type: string) => {
+const onBeforeDelete = () => {
   return new Promise((resolve) => {
     Taro.showModal({
       title: '提示',
@@ -210,7 +210,7 @@ const onOversize = () => {
 
 // 删除图片回调
 const onDelete = async (type: string) => {
-  const result = await onBeforeDelete(type)
+  const result = await onBeforeDelete()
   if (result) {
     imageMap.value[type] = null
   }
@@ -246,7 +246,6 @@ const handleUpload = (type: string) => {
           src: tempFilePath
         })
       } catch (error) {
-        console.error('图片预加载失败', error)
         log.error('图片预加载失败', error)
       }
     }
@@ -286,12 +285,10 @@ const checkLoginStatus = async () => {
   const token = Taro.getStorageSync('token')
   if (!token) {
     // 未登录，显示登录弹窗
-    console.log('未登录，显示登录弹窗')
     showLoginPopup.value = true
   } else {
     // 已登录，检查授权状态
     const userInfo = Taro.getStorageSync('userInfo')
-    console.log('已登录 检查授权')
     await checkAuthAndStartAnalyze(userInfo)
   }
 }
@@ -300,11 +297,9 @@ const checkLoginStatus = async () => {
 const checkAuthAndStartAnalyze = async (userInfo) => {
   if (!userInfo || !userInfo.nickname || !userInfo.avatarUrl) {
     // 未授权，显示授权弹窗
-    console.log('未授权，显示授权弹窗')
     showAuthPopup.value = true
   } else {
     // 已授权，开始分析
-    console.log('已授权，进入分析')
     await startAnalyzeProcess()
   }
 }
@@ -318,12 +313,6 @@ const startAnalyzeProcess = async () => {
     fileList.value.slice(1).forEach((file, index) => {
       formData[`file${index + 1}`] = file.url  // 从 file1 开始，因为 file0 通过 filePath 传递
     })
-
-    console.log('准备上传的数据:', {
-      file0: fileList.value[0].url,  // 第一张图片通过 filePath 上传
-      ...formData  // 其他图片通过 formData 上传
-    })
-//
     const MultiPart = require('../../utils/Multipart.min.js')
     const fields = []
     const files = fileList.value.map(file => {
@@ -332,7 +321,7 @@ const startAnalyzeProcess = async () => {
         filePath: file.url
       }
     })
-    console.log('上传参数:', files)
+    log.info('上传参数:', files)
     const res = await new MultiPart({
           fields,
           files
@@ -342,9 +331,8 @@ const startAnalyzeProcess = async () => {
         'sessionId': Taro.getStorageSync('token')
       }
     })
-    console.log('上传结果:', res)
+    log.info('上传结果:', res)
     if (res.data.code === 200){
-      console.log('上传成功')
       Taro.showToast({
         title: '正在分析中，鉴定结果请到鉴定列表中查找',
         icon: 'none'
@@ -355,7 +343,6 @@ const startAnalyzeProcess = async () => {
       throw new Error(`请求失败，状态码：${res.data.msg}`)
     }
   } catch (err) {
-    console.error('操作失败', err)
     log.error('操作失败', err)
     Taro.showToast({
       title: '系统错误',
@@ -368,7 +355,6 @@ const startAnalyzeProcess = async () => {
 
 // 处理登录响应
 const handleLoginResponse = (userInfo) => {
-  console.log('登录成功,授权状态')
   showLoginPopup.value = false
   // 登录成功后，检查授权状态
   checkAuthAndStartAnalyze(userInfo)
@@ -376,14 +362,12 @@ const handleLoginResponse = (userInfo) => {
 
 // 处理登录弹窗关闭
 const handleLoginClose = () => {
-  console.log('登录弹窗关闭')
   showLoginPopup.value = false
 }
 
 // 处理授权确认
 const handleAuthConfirm = (userInfo) => {
   showAuthPopup.value = false
-  console.log('更新用户信息：', userInfo)
   // 授权成功后，开始分析
   startAnalyzeProcess()
 }
@@ -408,7 +392,6 @@ const goToHistory = () => {
   Taro.navigateTo({
     url: '/pages/history/index'
   }).catch(err => {
-    console.error('跳转鉴定记录页面失败', err)
     log.error('跳转鉴定记录页面失败', err)
     Taro.showToast({
       title: '跳转失败',

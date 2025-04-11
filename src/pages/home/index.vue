@@ -138,7 +138,7 @@
           </view>
 
           <view class="button-block">
-            <nut-button type="primary" class="analyze-btn" @tap="startAnalyze" :loading="isLoading" :disabled="isLoading">
+            <nut-button type="primary" class="analyze-btn" @click="startAnalyze" :loading="isLoading" :disabled="isLoading">
               开始分析
             </nut-button>
           </view>

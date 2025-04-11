@@ -14,23 +14,22 @@
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue'
 import Taro from '@tarojs/taro'
+import log from "../../utils/log";
 
 // 个性化推荐开关状态
 const isPersonalized = ref(true)
 
 // 保存开关状态
 const savePersonalizedSetting = (value) => {
-  console.log('保存个性化推荐设置:', value)
   try {
     Taro.setStorageSync('personalized_setting', value)
   } catch (error) {
-    console.error('保存设置失败:', error)
+    log.error('保存设置失败:', error)
   }
 }
 
 // 处理开关变化
 const handleSwitchChange = (value) => {
-  console.log('个性化推荐状态变更为:', value)
   savePersonalizedSetting(value)
 }
 
@@ -44,12 +43,11 @@ onMounted(() => {
   // 恢复开关状态
   try {
     const savedSetting = Taro.getStorageSync('personalized_setting')
-    console.log('读取保存的设置:', savedSetting)
     if (savedSetting !== null && savedSetting !== undefined) {
       isPersonalized.value = savedSetting
     }
   } catch (error) {
-    console.error('读取设置失败:', error)
+    log.error('读取设置失败:', error)
   }
 })
 

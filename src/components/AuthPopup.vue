@@ -18,6 +18,10 @@
         <view class="subtitle">仅作个人资料展示</view>
         
         <view class="avatar-section">
+          <view class="avatar-tip">
+            点击下方头像框获取头像
+            <view class="arrow-down"></view>
+          </view>
           <button class="avatar-wrapper" open-type="chooseAvatar" @chooseavatar="onChooseAvatar"  >
             <nut-avatar 
               class="avatar" 
@@ -35,7 +39,7 @@
             class="nickname-input" 
             :value="nickname" 
             @change="onNickNameChange"
-            placeholder="请输入昵称,不要带入表情"
+            placeholder="点击此处输入昵称,不要有表情符号"
           />
         </view>
         
@@ -288,8 +292,34 @@ const handleClose = () => {
     .avatar-section {
       padding: 24px 16px;
       display: flex;
-      justify-content: center;
+      flex-direction: column;
+      align-items: center;
       border-bottom: 1px solid #eee;
+      position: relative;
+
+      .avatar-tip {
+        font-size: 15px;
+        color: #07c160;
+        margin-bottom: 12px;
+        font-weight: 500;
+        background-color: #f0f9f0;
+        padding: 6px 12px;
+        border-radius: 4px;
+        position: relative;
+        text-align: center;
+        
+        .arrow-down {
+          width: 0;
+          height: 0;
+          border-left: 6px solid transparent;
+          border-right: 6px solid transparent;
+          border-top: 8px solid #07c160;
+          position: absolute;
+          bottom: -8px;
+          left: 50%;
+          transform: translateX(-50%);
+        }
+      }
 
       .avatar-wrapper {
         background: none;

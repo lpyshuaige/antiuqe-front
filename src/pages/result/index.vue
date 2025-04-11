@@ -252,7 +252,6 @@ onMounted(() => {
 
 // 页面显示时检查是否需要重新获取报告详情
 useDidShow(() => {
-  console.log('鉴定报告页面显示，检查是否需要刷新报告状态')
   // 如果有报告ID，重新获取报告详情以更新支付状态
   if (!isLoading.value && reportId.value) {
     fetchReportDetail(reportId.value)

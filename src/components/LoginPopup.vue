@@ -7,10 +7,9 @@
         </view>
       </view>
       <view class="popup-content">
-        <button class="wechat-login-btn" @tap="handleLogin">
-          <IconFont name="weixin" size="20" />
+        <nut-button class="wechat-login-btn" @click="handleLogin" :loading="isLoading" :disabled="isLoading">
           微信一键登录
-        </button>
+        </nut-button>
       </view>
     </view>
   </nut-popup>
@@ -40,10 +39,17 @@ watch(() => props.show, (newValue) => {
 const onVisibleChange = (value) => {
   isVisible.value = value
   if (!value) {
+    // 关闭弹窗时重置状态
+    isLoading.value = false
     emit('update:show', false)
     emit('close')
+  } else {
+    // 打开弹窗时重置状态
+    isLoading.value = false
   }
 }
+
+const isLoading = ref(false)
 
 // 登录请求函数
 const loginRequest = async (code: string) => {
@@ -63,6 +69,12 @@ const loginRequest = async (code: string) => {
 }
 
 const handleLogin = async () => {
+  // 如果已经在加载中，直接返回，不执行后续操作
+  if (isLoading.value) {
+    return;
+  }
+  
+  isLoading.value = true
   try {
     const loginRes = await Taro.login()
     if (loginRes.code) {
@@ -80,8 +92,10 @@ const handleLogin = async () => {
       emit('update:show', false)
       emit('close')
     }
+    isLoading.value = false
   } catch (err) {
     log.error('登录失败', err)
+    isLoading.value = false
     Taro.showToast({
       title: '登录失败',
       icon: 'error',
@@ -132,6 +146,12 @@ const handleClose = () => {
 
       .nutui-iconfont {
         margin-right: 8px;
+      }
+      
+      &[disabled] {
+        opacity: 0.6;
+        background: #07c160 !important;
+        color: #fff !important;
       }
     }
   }

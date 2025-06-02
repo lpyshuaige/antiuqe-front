@@ -79,7 +79,7 @@
             <view class="option-content">
               <view class="option-title">开通会员</view>
               <view class="option-desc">享受无限次鉴定服务</view>
-              <view class="option-price">12元/月</view>
+              <view class="option-price">25元/月</view>
             </view>
             <view class="option-check">
               <CheckChecked 
@@ -103,7 +103,7 @@
             <view class="option-content">
               <view class="option-title">单次鉴定</view>
               <view class="option-desc">仅查看本次完整报告</view>
-              <view class="option-price">6元/次</view>
+              <view class="option-price">8元(首次1元)/次</view>
             </view>
             <view class="option-check">
               <CheckChecked 

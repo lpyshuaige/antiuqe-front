@@ -10,7 +10,7 @@
         <view class="wechat-info">
           <view class="wechat-id">
             <text class="label">微信号：</text>
-            <text class="value">19210091735</text>
+            <text class="value">19210134942</text>
             <view class="copy-btn" @tap="copyWechatId">复制</view>
           </view>
         </view>

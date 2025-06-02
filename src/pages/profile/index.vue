@@ -15,9 +15,6 @@
           <!-- 会员标识 -->
           <view v-if="userInfo && userInfo.isMember" class="member-badge">会员</view>
         </view>
-        <view class="arrow-icon" @tap="goToUserInfo">
-          <IconFont name="right" size="16" />
-        </view>
       </view>
     </view>
 
@@ -170,11 +167,6 @@ const handleAbout = () => {
   })
 }
 
-const goToUserInfo = () => {
-  Taro.navigateTo({
-    url: '/pages/userInfo/index'
-  })
-}
 
 const handleLogout = async () => {
   Taro.showModal({
@@ -271,11 +263,6 @@ const handleLogout = async () => {
           align-items: center;
           justify-content: center;
         }
-      }
-
-      .arrow-icon {
-        color: #999;
-        padding: 8px;
       }
     }
   }

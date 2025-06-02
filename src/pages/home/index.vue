@@ -1,16 +1,16 @@
 <template>
   <view class="container">
     <view class="home-container">
-      <view class="header-section">
-        <text class="title">Ai鉴宝</text>
-      </view>
+<!--      <view class="header-section">-->
+<!--        <text class="title">Ai鉴宝</text>-->
+<!--      </view>-->
 
       <view class="content-section">
         <view class="upload-section">
           <view class="section-block tips-block">
             <view class="block-title">建议</view>
             <view class="tip-list">
-              <view class="tip-item">请尽可能多的拍摄物品的不同角度（整体器形、底部、口沿、器内、微观特征）</view>
+              <view class="tip-item">请尽可能清晰地拍摄物品的正面、反面和底部</view>
               <view class="tip-item">确保光线充足，画面清晰，背景简洁，突出主体</view>
               <view class="tip-item">鉴定结果请到<text class="link-text" @tap="goToHistory">我的-鉴定记录</text>中查看</view>
               <view class="tip-item">首次鉴定免费，未付费的报告半小时后会自动删除</view>
@@ -77,62 +77,6 @@
                     底部
                   </view>
                 </view>
-
-                <!-- 口沿 -->
-                <view class="upload-item">
-                  <view class="image-container">
-                    <view v-if="imageMap.rim" class="image-preview">
-                      <image :src="imageMap.rim.url" mode="aspectFill" class="preview-image" />
-                      <view class="delete-icon" @tap="onDelete('rim')">
-                        <IconFont name="close" size="12" color="#fff" />
-                      </view>
-                    </view>
-                    <view v-else class="upload-box" @tap="handleUpload('rim')">
-                      <view class="upload-hint">点击上传</view>
-                    </view>
-                  </view>
-                  <view class="upload-item-title">
-                    <text class="required">*</text>
-                    口沿
-                  </view>
-                </view>
-
-                <!-- 器内 -->
-                <view class="upload-item">
-                  <view class="image-container">
-                    <view v-if="imageMap.inside" class="image-preview">
-                      <image :src="imageMap.inside.url" mode="aspectFill" class="preview-image" />
-                      <view class="delete-icon" @tap="onDelete('inside')">
-                        <IconFont name="close" size="12" color="#fff" />
-                      </view>
-                    </view>
-                    <view v-else class="upload-box" @tap="handleUpload('inside')">
-                      <view class="upload-hint">点击上传</view>
-                    </view>
-                  </view>
-                  <view class="upload-item-title">
-                    <text class="required">*</text>
-                    器内
-                  </view>
-                </view>
-
-                <!-- 微观特征 -->
-                <view class="upload-item">
-                  <view class="image-container">
-                    <view v-if="imageMap.micro" class="image-preview">
-                      <image :src="imageMap.micro.url" mode="aspectFill" class="preview-image" />
-                      <view class="delete-icon" @tap="onDelete('micro')">
-                        <IconFont name="close" size="12" color="#fff" />
-                      </view>
-                    </view>
-                    <view v-else class="upload-box" @tap="handleUpload('micro')">
-                      <view class="upload-hint">点击上传</view>
-                    </view>
-                  </view>
-                  <view class="upload-item-title">
-                    微观特征
-                  </view>
-                </view>
               </view>
             </view>
           </view>
@@ -156,6 +100,10 @@
       @confirm="handleAuthConfirm" 
       @close="handleAuthClose">
     </AuthPopup>
+    <AgreementPopup
+      v-model:show="showAgreementPopup"
+      @confirm="handleAgreementConfirm">
+    </AgreementPopup>
   </view>
 </template>
 
@@ -164,6 +112,7 @@ import { ref, computed } from 'vue'
 import Taro, { useShareAppMessage } from '@tarojs/taro'
 import LoginPopup from '../../components/LoginPopup.vue'
 import AuthPopup from '../../components/AuthPopup.vue'
+import AgreementPopup from '../../components/AgreementPopup.vue'
 import { IconFont } from "@nutui/icons-vue-taro"
 import BASE_URL from "../../utils/request";
 import log from "../../utils/log";
@@ -173,9 +122,6 @@ const imageMap = ref({
   front: null,  // 整体器形-正面
   back: null,   // 整体器形-反面
   bottom: null, // 底部
-  rim: null,    // 口沿
-  inside: null, // 器内
-  micro: null   // 微观特征
 })
 
 // 修改文件列表的获取方式
@@ -186,6 +132,7 @@ const fileList = computed(() => {
 const isLoading = ref(false)
 const showLoginPopup = ref(false)
 const showAuthPopup = ref(false)
+const showAgreementPopup = ref(false)
 
 // 删除前的回调
 const onBeforeDelete = () => {
@@ -257,16 +204,14 @@ const startAnalyze = async () => {
   if (isLoading.value) return
 
   // 检查必填图片是否都已上传
-  const requiredTypes = ['front', 'back', 'bottom', 'rim', 'inside']
+  const requiredTypes = ['front', 'back', 'bottom']
   const missingTypes = requiredTypes.filter(type => !imageMap.value[type])
 
   if (missingTypes.length > 0) {
     const typeNames = {
       front: '整体器形-正面',
       back: '整体器形-反面',
-      bottom: '底部',
-      rim: '口沿',
-      inside: '器内'
+      bottom: '底部'
     }
     const missingNames = missingTypes.map(type => typeNames[type]).join('、')
     Taro.showToast({
@@ -299,9 +244,27 @@ const checkAuthAndStartAnalyze = async (userInfo) => {
     // 未授权，显示授权弹窗
     showAuthPopup.value = true
   } else {
-    // 已授权，开始分析
+    // 已授权，检查是否同意过协议
+    await checkAgreementAndStartAnalyze()
+  }
+}
+
+// 检查协议同意状态并开始分析
+const checkAgreementAndStartAnalyze = async () => {
+  const agreementVer = Taro.getStorageSync('agreement-ver')
+  if (!agreementVer || agreementVer !== 'v1') {
+    // 未同意协议或协议版本不匹配，显示协议弹窗
+    showAgreementPopup.value = true
+  } else {
+    // 已同意协议，开始分析
     await startAnalyzeProcess()
   }
+}
+
+// 处理协议确认
+const handleAgreementConfirm = async () => {
+  // 用户确认协议后，开始分析
+  await startAnalyzeProcess()
 }
 
 // 分析流程
@@ -368,8 +331,8 @@ const handleLoginClose = () => {
 // 处理授权确认
 const handleAuthConfirm = (userInfo) => {
   showAuthPopup.value = false
-  // 授权成功后，开始分析
-  startAnalyzeProcess()
+  // 授权成功后，检查协议状态
+  checkAgreementAndStartAnalyze()
 }
 
 // 处理授权弹窗关闭
@@ -418,21 +381,21 @@ useShareAppMessage(() => {
 .home-container {
   padding: 16px;
 
-  .header-section {
-    background-color: #fff;
-    padding: 32px 16px;
-    border-radius: 12px;
-    margin-bottom: 16px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-    text-align: center;
-
-    .title {
-      font-size: 28px;
-      font-weight: bold;
-      color: #333;
-      letter-spacing: 2px;
-    }
-  }
+  //.header-section {
+  //  background-color: #fff;
+  //  padding: 32px 16px;
+  //  border-radius: 12px;
+  //  margin-bottom: 16px;
+  //  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  //  text-align: center;
+  //
+  //  .title {
+  //    font-size: 28px;
+  //    font-weight: bold;
+  //    color: #333;
+  //    letter-spacing: 2px;
+  //  }
+  //}
 
   .content-section {
     background-color: #fff;

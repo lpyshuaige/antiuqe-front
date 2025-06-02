@@ -6,7 +6,6 @@ export default defineAppConfig({
     'pages/history/index',
     'pages/order/detail/index',
     'pages/order/list/index',
-    'pages/userInfo/index',
     'pages/agreement/index',
     'pages/contact/index',
     'pages/settings/index'
